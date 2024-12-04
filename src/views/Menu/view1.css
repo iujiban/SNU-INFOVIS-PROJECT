@@ -1,6 +1,5 @@
 #menu {
     height: 1000px;
-
     /* background-color: blue; */
 }
 
@@ -14,7 +13,7 @@
  
 .menu-container {
     height: 100%;
-    padding: 10px;
+    padding: 5px;
     display: flex;
     flex-direction: column;
     background-color: #f9f9f9;
@@ -23,10 +22,15 @@
   }
 
   .menu-section {
+    border-width: 1px;
+    margin-top: 5px;
+    margin-left: 5px;
+    margin-right: 5px;
+    border-radius: 5px;
     margin-bottom: 15px; /* 각 섹션 간의 간격 */
-    padding: 10px; /* 내부 여백 */
-    background-color: #333; /* 섹션 배경색 */
-    border: 1px solid #333; /* 섹션 테두리 */
+    padding: 5px; /* 내부 여백 */
+    background-color: #ddd; /* 섹션 배경색 */
+    border: 1px solid #ddd; /* 섹션 테두리 */
     border-radius: 4px; /* 둥근 테두리 */
   }
 
@@ -39,13 +43,13 @@
 .menu-content {
     display: flex;
     flex-direction: column;
-    gap: 10px; 
+    gap: 5px; 
   }
 
 .menu-label{
     font-size: 14px;
     font-weight: bold;
-    color: #555;
+    color: #333;
 }
 
 input[type="range"],

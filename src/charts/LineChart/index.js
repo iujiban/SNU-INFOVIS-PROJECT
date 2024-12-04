@@ -1,7 +1,7 @@
 import React, { Component } from 'react';
 import draw from './vis';
 
-export default class LineChart extends Component {
+export default class MapChart extends Component {
 
     componentDidMount() {
         draw(this.props);

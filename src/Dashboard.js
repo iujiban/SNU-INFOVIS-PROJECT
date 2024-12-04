@@ -1,9 +1,8 @@
 import React, { useState, useMemo } from 'react';
 import { Layout } from 'antd';
 import Menu from './views/Menu';
+import MapChart from './views/MapChart';
 import View2 from './views/View2';
-import View3 from './views/View3';
-import View4 from './views/View4';
 import View5 from './views/View5';
 import View6 from './views/View6';
 import data from './data';
@@ -27,7 +26,7 @@ const Dashboard = () => {
     // UI 렌더링
     return (
         <div>
-            <Layout style={{ height: 1000 }}>
+            <Layout style={{ height: 1010 }}>
                 {/* 좌측 메뉴 영역 */}
                 <Sider width={200} style={{ backgroundColor: '#eee' }}>
                     <Content
@@ -44,11 +43,33 @@ const Dashboard = () => {
                 
                 {/* 메인 콘텐츠 영역 */}
                 <Layout>
-                    <Content style={{ height: 300 }}>
-                        <View4 user={selectedUser} />
+                    <Content style={{ 
+                        height: 800, 
+                        width : 1200,
+                        padding : 10,  
+                        display: 'flex',
+                        alignItems: 'flex-start', }}>
+                        <MapChart user={selectedUser} />
+                        <div style={{ display: 'flex', flexDirection: 'row', width: '100%' }}>
+                        <div style={{ flex: 1, paddingRight: 10 }}>
+                            <MapChart user={selectedUser} />
+                        </div>
+                        <div style={{ flex: 1, paddingLeft: 10 }}>
+                            <PieChart data={filteredData} />
+                        </div>
+                    </div>
                     </Content>
-                    <Layout style={{ height: 600 }}>
-                        <Content>
+                    <Content>
+                        <View2 data={filteredData}/>
+                    </Content>
+                    <Layout style={{ height: 545 }}>
+                        <Content style ={{
+                            height:600,
+                            width: 600,
+                            padding: 10,
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                        }}>
                             <View5 data={filteredData} />
                         </Content>
                         <Sider width={300} style={{ backgroundColor: '#eee' }}>
@@ -63,10 +84,10 @@ const Dashboard = () => {
                 <Footer style={{ height: 20 }}>
                     <div style={{ marginTop: -10 }}>
                         Source Code{' '}
-                        <a href="https://github.com/sdq/react-d3-dashboard">
-                            https://github.com/sdq/react-d3-dashboard
+                        <a href="https://github.com/iujiban/SNU-INFOVIS-PROJECT/tree/main/src">
+                        https://github.com/iujiban/SNU-INFOVIS-PROJECT/tree/main/src
                         </a>
-                        ; Author <a href="https://sdq.ai">sdq</a>;
+                        ; Author: JihoonBan, Jaeseon Lee, JaeYongLee, SeoheeKim;
                     </div>
                 </Footer>
             </Layout>
