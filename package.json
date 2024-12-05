@@ -3,11 +3,17 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@popperjs/core": "^2.11.8",
     "antd": "^5.22.3",
-    "d3": "4.13.0",
+    "bootstrap": "^5.3.3",
+    "d3": "^7.9.0",
+    "d3-geo": "^3.1.1",
+    "d3-geo-projection": "^4.0.0",
+    "d3-scale-chromatic": "^3.1.0",
     "lodash": "^4.17.15",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-range": "^1.10.0",
     "react-scripts": "^5.0.1",
     "react-select": "^5.8.3"
   },
