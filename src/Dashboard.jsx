@@ -72,11 +72,11 @@ const Dashboard = () => {
             </div>
             <div className='row' style={{ height: 'calc(100vh - 150px)' }}>
                 {/* Sidebar */}
-                <div className='col-3 p-2 d-flex flex-column' style={{ height: '100%' }}>
+                <div className='col-2 p-2 d-flex flex-column' style={{ height: '100%' }}>
                     <Sidebar />
                 </div>
                 {/* Main Content */}
-                <div className='col-9 p-2 d-flex flex-column' style={{ height: '100%' }}>
+                <div className='col-10 p-2 d-flex flex-column' style={{ height: '100%' }}>
                     <div className='row flex-grow-1' style={{ flex: 1 }}>
                         {/* Map */}
                         <div className='col-6 p-2 h-100'>
