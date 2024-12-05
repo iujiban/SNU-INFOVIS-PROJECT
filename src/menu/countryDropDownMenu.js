@@ -5,26 +5,17 @@ import SeizuresCountry from '../data/Drug_seizures_2018_2022.json'
 import PrevalanceCountry from '../data/Prevalence_of_drug_use_NPS_General.json'
 import PriceCountry from '../data/Prices_of_drugs.json'
 const countryDropDownMenu = (props) => {
-/* modeDropDownMenu를 선택한 값으로 그 값의 country를 하려고 하였으나.. 작동이 느려짐..   
+
   const {selectedMode} = props;
 
-    const dataMap = {
-      DrugSeziure: SeizuresCountry,
-      DrugPrevalance: PrevalanceCountry,
-      DrugPrice: PriceCountry,
-    };
+  const dataMap = {
+    DrugSeziure: SeizuresCountry,
+    DrugPrevalance: PrevalanceCountry,
+    DrugPrice: PriceCountry,
+  };
 
-    const filteredData = dataMap[selectedMode.value];
-*/
-const {selectedMode} = props;
-
-const dataMap = {
-  DrugSeziure: SeizuresCountry,
-  DrugPrevalance: PrevalanceCountry,
-  DrugPrice: PriceCountry,
-};
-
-const filteredData = dataMap[selectedMode.value];
+  const filteredData = dataMap[selectedMode.value];
+  
     const optionsCountry = [
       ...new Set(filteredData.map(item => item["Country/Territory"]))
     ].filter(country => country).map(country => ({value: country, label: country}))

@@ -9,7 +9,7 @@ export default class View5 extends Component {
             <div id='view5' className='pane'>
                 <div className='header'>Age</div>
                 <div>
-                <BarChart data={data} width={1000} height={550}/>
+                <BarChart data={data} width={900} height={480}/>
                 </div>                
             </div>
         )

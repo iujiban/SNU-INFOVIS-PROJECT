@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Layout } from 'antd';
 import Menu from './views/Menu';
 import MapChart from './views/MapChart';
-import View2 from './views/View2';
+import PieChart from './views/PieChart'
 import View5 from './views/View5';
 import View6 from './views/View6';
 import data from './data';
@@ -32,6 +32,7 @@ const Dashboard = () => {
                     <Content
                         style={{
                             height: 1000,
+                            paddingTop: 2,
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
@@ -45,36 +46,34 @@ const Dashboard = () => {
                 <Layout>
                     <Content style={{ 
                         height: 800, 
-                        width : 1200,
-                        padding : 10,  
+                        width : 1500,
+                        padding : 20,
+                        paddingTop : 3,  
                         display: 'flex',
                         alignItems: 'flex-start', }}>
                         <MapChart user={selectedUser} />
-                        <div style={{ display: 'flex', flexDirection: 'row', width: '100%' }}>
-                        <div style={{ flex: 1, paddingRight: 10 }}>
-                            <MapChart user={selectedUser} />
-                        </div>
-                        <div style={{ flex: 1, paddingLeft: 10 }}>
+                    <div style={{ display: 'flex', flexDirection: 'row', width: '100%' }}>
+                        <div style={{ flex: 1, paddingLeft: 5, width: 600, height: 800, }}>
                             <PieChart data={filteredData} />
                         </div>
                     </div>
                     </Content>
-                    <Content>
-                        <View2 data={filteredData}/>
-                    </Content>
-                    <Layout style={{ height: 545 }}>
+                    <Layout style={{ height: 900, padding: 5 }}>
                         <Content style ={{
-                            height:600,
+                            height:400,
                             width: 600,
-                            padding: 10,
+                            paddingLeft: 12,
+                            paddingTop: 0,
                             display: 'flex',
                             alignItems: 'flex-start',
                         }}>
                             <View5 data={filteredData} />
+                    <div style={{ display: 'flex', flexDirection: 'row', width: '100%' }}>
+                        <div style={{ flex: 1, paddingLeft: 5, width: 600, height: 800, }}>
+                                <View6 data={filteredData} changeSelectUser={setSelectedUser} />
+                            </div>
+                        </div>
                         </Content>
-                        <Sider width={300} style={{ backgroundColor: '#eee' }}>
-                            <View6 data={filteredData} changeSelectUser={setSelectedUser} />
-                        </Sider>
                     </Layout>
                 </Layout>
             </Layout>
@@ -84,8 +83,8 @@ const Dashboard = () => {
                 <Footer style={{ height: 20 }}>
                     <div style={{ marginTop: -10 }}>
                         Source Code{' '}
-                        <a href="https://github.com/iujiban/SNU-INFOVIS-PROJECT/tree/main/src">
-                        https://github.com/iujiban/SNU-INFOVIS-PROJECT/tree/main/src
+                        <a href="https://github.com/iujiban/SNU-INFOVIS-PROJECT">
+                        https://github.com/iujiban/SNU-INFOVIS-PROJECT
                         </a>
                         ; Author: JihoonBan, Jaeseon Lee, JaeYongLee, SeoheeKim;
                     </div>

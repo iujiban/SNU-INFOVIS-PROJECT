@@ -5,7 +5,7 @@ import LineChart from '../../charts/LineChart';
 export default class MapChart extends Component {
     render() {
         const {user} = this.props,
-              width = 1100,
+              width = 1250,
               height = 450;
         return (
             <div id='view4' className='pane' >
