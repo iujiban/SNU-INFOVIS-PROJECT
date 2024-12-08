@@ -3,12 +3,18 @@ import * as d3 from 'd3';
 import { geoNaturalEarth2 } from 'd3-geo-projection';
 import { useDimensions } from '../hooks/useDimensions';
 
-const Map = () => {
+const Map = ({data}) => {
     const containerRef = useRef();
     const svgContainerRef = useRef();
     const svgRef = useRef();
     const dimensions = useDimensions(svgContainerRef);
 
+    // Debug Data
+    useEffect(() => {
+        console.log('Map data updated:', data);
+        // Use the data to render the map
+    }, [data]);
+    
     useEffect(() => {
         if (dimensions.width === 0) return;
 

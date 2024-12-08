@@ -1,6 +1,27 @@
-import React from 'react';
+import React, {useState, useEffect} from 'react';
 
-const CheckboxStack = ({ label, options }) => {
+const CheckboxStack = ({ label, options, onChange, singleSelect = false }) => {
+
+    const [selectedOptions, setSelectedOptions] = useState([]);
+    
+    const handleCheckboxChange = (event) => {
+        const {value, checked} = event.target;
+        let updatedOptions;
+        
+        if (checked) {
+            updatedOptions =[...selectedOptions, value];
+            console.log(`Selected: ${value}`)
+        } else {
+            updatedOptions = selectedOptions.filter((option) => option !== value);
+            console.log (`UnSelected: ${value}`)
+        }
+
+        setSelectedOptions(updatedOptions);
+        onChange(updatedOptions)
+    };
+
+
+
     return (
         <div className="card m-2">
             <div className="card-body">
@@ -12,7 +33,7 @@ const CheckboxStack = ({ label, options }) => {
                             type="checkbox" 
                             value={option.value} 
                             id={`checkbox-${option.value}`} 
-                            checked
+                            onChange= {handleCheckboxChange}
                         />
                         <label className="form-check-label" htmlFor={`checkbox-${option.value}`}>
                             {option.label}

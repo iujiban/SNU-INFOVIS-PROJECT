@@ -1,8 +1,11 @@
 // React
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 
 // Data
-import data from './data';
+import Drugdata from './data/Drug_seizures_2018_2022.json';
+import PrevalenceNPSdata from './data/Prevalence_of_drug_use_NPS_General.json';
+import PrevalenceNonNPSdata from './data/Prevalence_of_drug_use_NonNPS_General.json'
+import PriceData from './data/Prices_of_drugs.json'
 
 // Components
 import Sidebar from './components/Sidebar';
@@ -47,17 +50,41 @@ export const priceData = [
 ];
 
 const Dashboard = () => {
-    // React Hook을 사용해 상태 관리
-    const [selectedUser, setSelectedUser] = useState(data[0]);
-    const [greaterThenAge, setGreaterThenAge] = useState(0);
-    const [includedGender, setIncludedGender] = useState(['Male', 'Female', 'Unknown']);
+    const [filters, setFilters] = useState({
+        mode: [], 
+        gender: 'all',
+        drugs: [],
+        region: null,
+        year: [2018, 2022],
+    });
+    
+    const handleFilterChange = (newFilters) => {
+        setFilters((prevFilters) => ({
+            ...prevFilters,
+            ...newFilters,
+        }));
+    };
 
-    // 필터링된 데이터를 계산
-    const filteredData = useMemo(() => {
-        return data
-            .filter(user => includedGender.includes(user.gender))
-            .filter(user => user.age > greaterThenAge);
-    }, [includedGender, greaterThenAge]);
+    const filteredMapData = useMemo(() => {
+        const result = {};
+        // Mode에 따라 바뀌는 데이터
+        if (filters.mode.includes('prevalence')) {
+            result.NPS = PrevalenceNPSdata;
+            result.NonNPS = PrevalenceNonNPSdata;
+        } else if (filters.mode.includes('seizure')) {
+            result.seizure = Drugdata; 
+        } else if (filters.mode.includes('price')) {
+            result.price = PriceData;
+        }
+
+        return result; // Return null if mode doesn't match any dataset
+
+    }, [filters.mode]);
+
+    useEffect(() => {
+        // Apply the filters to fetch or filter data as needed
+        console.log('Filters updated:', filters);
+    }, [filters]);
 
     // UI 렌더링
     return (
@@ -73,14 +100,14 @@ const Dashboard = () => {
             <div className='row' style={{ height: 'calc(100vh - 150px)' }}>
                 {/* Sidebar */}
                 <div className='col-2 p-2 d-flex flex-column' style={{ height: '100%' }}>
-                    <Sidebar />
+                    <Sidebar onFilterChange={handleFilterChange} />
                 </div>
                 {/* Main Content */}
                 <div className='col-10 p-2 d-flex flex-column' style={{ height: '100%' }}>
                     <div className='row flex-grow-1' style={{ flex: 1 }}>
                         {/* Map */}
                         <div className='col-6 p-2 h-100'>
-                            <Map />
+                            <Map data ={filteredMapData}/>
                         </div>
                         {/* Prevalence */}
                         <div className='col-6 p-2 h-100'>

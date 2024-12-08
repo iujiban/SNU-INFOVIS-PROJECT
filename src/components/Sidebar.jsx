@@ -3,6 +3,11 @@ import RadioStack from './ui/RadioStack';
 import Range from './ui/Range';
 import MultiLevelDropdown from './ui/MultiLevelDropdown';
 
+// data
+import Seziure from '../data/Drug_seizures_2018_2022.json'
+import Prevalence from '../data/Prevalence_of_drug_use_NPS_General.json';
+import Price from '../data/Prices_of_drugs.json'
+
 const modeOptions = [
     { value: 'prevalence', label: 'Prevalence'},
     { value: 'seizure', label: 'Seizure'},
@@ -61,38 +66,73 @@ const regionOptions = [
 const yearMin = 2018;
 const yearMax = 2022;
 
-const Sidebar = () => {
+const Sidebar = ({onFilterChange}) => {
+    //const [selectedMode, setSelectedMode] = useState[null];
+    //const [selectedRegion, setSelectedRegion] = useState[null];
+    //const [selectedCountry, setSelectedCountry] = useState[null]
+
+    const handleModeChange = (selectedModes) => {
+      //  const filteredData = dataMap[selectedModes.value];
+        onFilterChange({mode: selectedModes});
+
+    };
+    const handleGenderChange = (selectedGender) => {
+        onFilterChange({ gender: selectedGender });
+    };
+
+    const handleAgeChange = (selectedAge) => {
+        onFilterChange({ age: selectedAge });
+    };
+
+    const handleDrugChange = (selectedDrugs) => {
+        onFilterChange({ drugs: selectedDrugs });
+    };
+
+    const handleRegionChange = (selectedRegion) => {
+        onFilterChange({ region: selectedRegion });
+    };
+
+    const handleYearChange = (yearRange) => {
+        onFilterChange({ year: yearRange });
+    };
+
     return (
         <div className="sidebar">
             <CheckboxStack 
                 label="Mode" 
-                options={modeOptions} 
+                options={modeOptions}
+                onChange={handleModeChange} 
             />
             <MultiLevelDropdown 
                 label="Region" 
                 options={regionOptions}
                 levels={['continent', 'country']} 
+                onChange={handleRegionChange}
             />
             <Range 
                 min={yearMin} 
                 max={yearMax} 
                 step={1} 
                 name="Year" 
+                onChange={handleYearChange}
             />
             <RadioStack 
                 label="Gender"
                 options={genderOptions} 
                 name='genderRadio'
+                onChange={handleGenderChange}
             />
             <RadioStack 
                 label="Age" 
                 options={ageOptions} 
                 name='ageRadio'
+                onChange={handleAgeChange}
             />
             <MultiLevelDropdown 
                 label="Drug" 
                 options={drugOptions}
-                levels={['type', 'name']} 
+                levels={['type', 'name']}
+                onChange={handleDrugChange} 
             />
         </div>
     )
