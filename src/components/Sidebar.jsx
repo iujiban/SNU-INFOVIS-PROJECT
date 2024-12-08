@@ -2,6 +2,7 @@ import CheckboxStack from './ui/CheckboxStack';
 import RadioStack from './ui/RadioStack';
 import Range from './ui/Range';
 import MultiLevelDropdown from './ui/MultiLevelDropdown';
+import React, {useEffect, useState, useMemo} from 'react';
 
 // data
 import Seziure from '../data/Drug_seizures_2018_2022.json'
@@ -40,42 +41,76 @@ const drugOptions = [
     { type: 'Non-Opioid', name: 'MDMA', type: 'Empathogen' }
 ];
 
-const regionOptions = [
-    { continent: 'Asia', country: 'China', region: 'East Asia' },
-    { continent: 'Asia', country: 'Japan', region: 'East Asia' },
-    { continent: 'Asia', country: 'South Korea', region: 'East Asia' },
-    { continent: 'Asia', country: 'India', region: 'South Asia' },
-    { continent: 'Asia', country: 'Thailand', region: 'Southeast Asia' },
-    { continent: 'Asia', country: 'Vietnam', region: 'Southeast Asia' },
-    { continent: 'Europe', country: 'UK', region: 'Western Europe' },
-    { continent: 'Europe', country: 'France', region: 'Western Europe' },
-    { continent: 'Europe', country: 'Germany', region: 'Central Europe' },
-    { continent: 'Europe', country: 'Italy', region: 'Southern Europe' },
-    { continent: 'Europe', country: 'Spain', region: 'Southern Europe' },
-    { continent: 'Europe', country: 'Netherlands', region: 'Western Europe' },
-    { continent: 'North America', country: 'USA', region: 'Northern America' },
-    { continent: 'North America', country: 'Canada', region: 'Northern America' },
-    { continent: 'North America', country: 'Mexico', region: 'Central America' },
-    { continent: 'South America', country: 'Brazil', region: 'Eastern South America' },
-    { continent: 'South America', country: 'Argentina', region: 'Southern South America' },
-    { continent: 'South America', country: 'Chile', region: 'Southern South America' },
-    { continent: 'South America', country: 'Colombia', region: 'Northern South America' },
-    { continent: 'South America', country: 'Peru', region: 'Western South America' }
-];
-
 const yearMin = 2018;
 const yearMax = 2022;
 
 const Sidebar = ({onFilterChange}) => {
-    //const [selectedMode, setSelectedMode] = useState[null];
-    //const [selectedRegion, setSelectedRegion] = useState[null];
-    //const [selectedCountry, setSelectedCountry] = useState[null]
+    const [selectedMode, setSelectedMode] = useState(null);
+
+    const dataMap = {
+        seizure: Seziure,
+        prevalence: Prevalence,
+        price: Price,
+    }
 
     const handleModeChange = (selectedModes) => {
-      //  const filteredData = dataMap[selectedModes.value];
+        console.log('Selected mode:', selectedModes); 
+        setSelectedMode(selectedModes)
         onFilterChange({mode: selectedModes});
 
     };
+
+    const filteredData = selectedMode && Array.isArray(selectedMode)
+    ? selectedMode.flatMap(mode => dataMap[mode] || []) // Combine data for all selected modes
+    : selectedMode
+    ? dataMap[selectedMode.value]
+    : null;
+
+    const regionOptions = useMemo(() => {
+        if (!filteredData || filteredData.length === 0) {
+            return [];
+        }
+        // Extract unique continent-country combinations from filteredData
+        const uniqueRegions = new Map();
+        filteredData.forEach((item) => {
+            const { Region, 'Country/Territory': CountryTerritory } = item; // Adjust keys to match dataset structure
+            if (Region && CountryTerritory) {
+                uniqueRegions.set(`${Region}-${CountryTerritory}`, { region: Region, country: CountryTerritory });
+            }
+        });
+        return Array.from(uniqueRegions.values());
+    }, [filteredData]);
+
+    const yearOptions = useMemo(() => {
+        if (!filteredData || filteredData.length === 0) {
+            return [];
+        }
+    
+        const years = filteredData.map((item) => item.Year).filter((year) => year >= yearMin && year <= yearMax);
+    
+        // Find the minimum and maximum year within the filtered range
+        const minYear = Math.min(...years);
+        const maxYear = Math.max(...years);
+    
+        return { minYear, maxYear };
+    }, [filteredData]);
+
+    const DrugOptions = useMemo(() => {
+        if (!filteredData || filteredData.length === 0) {
+            return [];
+        }
+        const uniqueDrugs = new Map();
+        filteredData.forEach((item) => {
+            const { 'Drug group': drugGroup, Drug } = item; // Extract relevant fields
+            if (drugGroup && Drug) {
+                uniqueDrugs.set(`${drugGroup}-${Drug}`, { group: drugGroup, name: Drug });
+            }
+        });
+    
+        return Array.from(uniqueDrugs.values()); // Convert Map values to an array
+    }, [filteredData]);
+    
+
     const handleGenderChange = (selectedGender) => {
         onFilterChange({ gender: selectedGender });
     };
@@ -96,6 +131,14 @@ const Sidebar = ({onFilterChange}) => {
         onFilterChange({ year: yearRange });
     };
 
+    // Debug
+    useEffect(() => {
+        console.log('Updated selectedModes:', selectedMode);
+        console.log('Filtered Data:', filteredData);
+        console.log('Dynamic Region Options:', regionOptions);
+        console.log('Dynamic Year Options', yearOptions);
+        console.log('Dynamic Drug Options', DrugOptions);
+    }, [selectedMode, filteredData, regionOptions, yearOptions, DrugOptions]);
     return (
         <div className="sidebar">
             <CheckboxStack 
@@ -106,12 +149,12 @@ const Sidebar = ({onFilterChange}) => {
             <MultiLevelDropdown 
                 label="Region" 
                 options={regionOptions}
-                levels={['continent', 'country']} 
+                levels={['region', 'country']} 
                 onChange={handleRegionChange}
             />
             <Range 
-                min={yearMin} 
-                max={yearMax} 
+                min={yearOptions.minYear || yearMin} 
+                max={yearOptions.maxYear || yearMax}
                 step={1} 
                 name="Year" 
                 onChange={handleYearChange}

@@ -1,4 +1,4 @@
-import React, {useState, useEffect} from 'react';
+import React, {useState} from 'react';
 
 const CheckboxStack = ({ label, options, onChange, singleSelect = false }) => {
 
@@ -19,8 +19,6 @@ const CheckboxStack = ({ label, options, onChange, singleSelect = false }) => {
         setSelectedOptions(updatedOptions);
         onChange(updatedOptions)
     };
-
-
 
     return (
         <div className="card m-2">
