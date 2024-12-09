@@ -1,9 +1,16 @@
 import React, { useState } from 'react';
 import { Range as RangeSlider } from 'react-range';
 
-const Range = ({ name, min, max, step }) => {
+const Range = ({ name, min, max, step, onChange }) => {
     const [values, setValues] = useState([min, max]);
     const id = `range-${name.toLowerCase().replace(/\s+/g, '-')}`;
+
+    const handleChange = (newValues) => {
+        setValues(newValues);
+        if (onChange) {
+            onChange(newValues);
+        }
+    };
     
     return (
         <div className="card m-2 my-2">
@@ -14,7 +21,7 @@ const Range = ({ name, min, max, step }) => {
                     min={min}
                     max={max}
                     values={values}
-                    onChange={setValues}
+                    onChange={handleChange}
                     renderTrack={({ props, children, isDragged }) => (
                         <div
                             {...props}

@@ -47,6 +47,7 @@ const yearMax = 2022;
 const Sidebar = ({onFilterChange}) => {
     const [selectedMode, setSelectedMode] = useState(null);
     const [yearRange, setYearRange] = useState({ minYear: yearMin, maxYear: yearMax });
+    // const [selectedCountry, setSelectedCountry] = useState(null);
 
 
     const dataMap = {
@@ -68,6 +69,53 @@ const Sidebar = ({onFilterChange}) => {
     ? dataMap[selectedMode.value]
     : null;
 
+    const drugSeziureFilteredData = useMemo(() => {
+        if (!filteredData || filteredData.length === 0) {
+            console.log('Filtered Data is empty.');
+            return [];
+        }
+    
+        const filtered = filteredData.filter(item => {
+            const year = Number(item.Year);
+            return year >= yearMin && year <= yearMax && !isNaN(year); // Ensure valid years
+        });
+    
+        console.log('Drug Seziure Filtered Data:', filtered);
+        return filtered;
+    }, [filteredData, yearMin, yearMax]);
+    
+    const totalsByCountryDrugGroupAndYear = useMemo(() => {
+        if (!drugSeziureFilteredData || drugSeziureFilteredData.length === 0) return {};
+    
+        return drugSeziureFilteredData.reduce((totals, item) => {
+            const country = item['Country/Territory'];
+            const drugGroup = item['Drug group'];
+            const year = item['Year'];
+            const weight = parseFloat(item.Kilograms) || 0;
+    
+            if (country && drugGroup) {
+                // Initialize country if not already present
+                if (!totals[country]) totals[country] = {};
+    
+                // Initialize Drug group if not present
+                if (!totals[country][drugGroup]) {
+                    totals[country][drugGroup] = { total: 0, years: {} };
+                }
+    
+                // Add weight to the Drug group total
+                totals[country][drugGroup].total += weight;
+    
+                // Add weight to the Year total
+                if (!totals[country][drugGroup].years[year]) {
+                    totals[country][drugGroup].years[year] = 0;
+                }
+                totals[country][drugGroup].years[year] += weight;
+            }
+            return totals;
+        }, {});
+    }, [drugSeziureFilteredData]);
+
+
     const regionOptions = useMemo(() => {
         if (!filteredData || filteredData.length === 0) {
             return [];
@@ -88,15 +136,11 @@ const Sidebar = ({onFilterChange}) => {
             return { minYear: yearMin, maxYear: yearMax };
         }
 
-        console.log("filteredData.Length", filteredData.length);
-    
         const years = filteredData
         .map((item) => Number(item.Year)) // Convert Year to a number
         .filter((year) => !isNaN(year)) // Exclude invalid years
         .sort((a, b) => a - b); // Sort in ascending order
 
-        console.log("years.length", years.length);
-        console.log("years", years)
         if (years.length === 0) {
             return { minYear: yearMin, maxYear: yearMax }; // Default range if no valid years found
          }
@@ -141,20 +185,28 @@ const Sidebar = ({onFilterChange}) => {
     };
 
     const handleYearChange = (yearRange) => {
-        onFilterChange({ year: yearRange });
+        console.log("Input yearRange:", yearRange); // Log the input values
+        const payload = { year: yearRange };
+        console.log("Payload to onFilterChange:", payload); // Log the output payload
+        onFilterChange(payload);
     };
 
     // Debug
     useEffect(() => {
+        
         if (yearOptions.minYear !== yearRange.minYear || yearOptions.maxYear !== yearRange.maxYear) {
             setYearRange({ minYear: yearOptions.minYear, maxYear: yearOptions.maxYear });
         }
+        /*
         console.log('Updated selectedModes:', selectedMode);
         console.log('Filtered Data:', filteredData);
-        console.log('Dynamic Region Options:', regionOptions);
+        console.log('Seizure Data:', dataMap['seizure']);
+        */
         console.log('Dynamic Year Options', yearOptions);
-        console.log('Dynamic Drug Options', DrugOptions);
-    }, [selectedMode, filteredData, regionOptions, yearOptions, DrugOptions, yearRange]);
+        
+        console.log('FilteredSeziure Data:', drugSeziureFilteredData);
+        console.log('Total Kilograms by Drug Group:', totalsByCountryDrugGroupAndYear);
+    }, [yearOptions,  yearRange, totalsByCountryDrugGroupAndYear]);
     return (
         <div className="sidebar">
             <CheckboxStack 
