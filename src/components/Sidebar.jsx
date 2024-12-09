@@ -46,6 +46,8 @@ const yearMax = 2022;
 
 const Sidebar = ({onFilterChange}) => {
     const [selectedMode, setSelectedMode] = useState(null);
+    const [yearRange, setYearRange] = useState({ minYear: yearMin, maxYear: yearMax });
+
 
     const dataMap = {
         seizure: Seziure,
@@ -83,17 +85,28 @@ const Sidebar = ({onFilterChange}) => {
 
     const yearOptions = useMemo(() => {
         if (!filteredData || filteredData.length === 0) {
-            return [];
+            return { minYear: yearMin, maxYear: yearMax };
         }
+
+        console.log("filteredData.Length", filteredData.length);
     
-        const years = filteredData.map((item) => item.Year).filter((year) => year >= yearMin && year <= yearMax);
-    
+        const years = filteredData
+        .map((item) => Number(item.Year)) // Convert Year to a number
+        .filter((year) => !isNaN(year)) // Exclude invalid years
+        .sort((a, b) => a - b); // Sort in ascending order
+
+        console.log("years.length", years.length);
+        console.log("years", years)
+        if (years.length === 0) {
+            return { minYear: yearMin, maxYear: yearMax }; // Default range if no valid years found
+         }
+
         // Find the minimum and maximum year within the filtered range
         const minYear = Math.min(...years);
         const maxYear = Math.max(...years);
     
         return { minYear, maxYear };
-    }, [filteredData]);
+    }, [filteredData, yearMin, yearMax]);
 
     const DrugOptions = useMemo(() => {
         if (!filteredData || filteredData.length === 0) {
@@ -133,12 +146,15 @@ const Sidebar = ({onFilterChange}) => {
 
     // Debug
     useEffect(() => {
+        if (yearOptions.minYear !== yearRange.minYear || yearOptions.maxYear !== yearRange.maxYear) {
+            setYearRange({ minYear: yearOptions.minYear, maxYear: yearOptions.maxYear });
+        }
         console.log('Updated selectedModes:', selectedMode);
         console.log('Filtered Data:', filteredData);
         console.log('Dynamic Region Options:', regionOptions);
         console.log('Dynamic Year Options', yearOptions);
         console.log('Dynamic Drug Options', DrugOptions);
-    }, [selectedMode, filteredData, regionOptions, yearOptions, DrugOptions]);
+    }, [selectedMode, filteredData, regionOptions, yearOptions, DrugOptions, yearRange]);
     return (
         <div className="sidebar">
             <CheckboxStack 
@@ -153,8 +169,8 @@ const Sidebar = ({onFilterChange}) => {
                 onChange={handleRegionChange}
             />
             <Range 
-                min={yearOptions.minYear || yearMin} 
-                max={yearOptions.maxYear || yearMax}
+                min={yearRange.minYear} 
+                max={yearRange.maxYear}
                 step={1} 
                 name="Year" 
                 onChange={handleYearChange}
