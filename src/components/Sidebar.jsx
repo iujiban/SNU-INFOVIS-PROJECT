@@ -45,6 +45,7 @@ const yearMin = 2018;
 const yearMax = 2022;
 
 const Sidebar = ({onFilterChange}) => {
+    const [yearStatic, setYearStatic] = useState({ minYear: 2018, maxYear: 2022 });
     const [selectedMode, setSelectedMode] = useState(null);
     const [yearRange, setYearRange] = useState({ minYear: yearMin, maxYear: yearMax });
     // const [selectedCountry, setSelectedCountry] = useState(null);
@@ -57,32 +58,29 @@ const Sidebar = ({onFilterChange}) => {
     }
 
     const handleModeChange = (selectedModes) => {
-        console.log('Selected mode:', selectedModes); 
         setSelectedMode(selectedModes)
         onFilterChange({mode: selectedModes});
 
     };
-
+/*
     const filteredData = selectedMode && Array.isArray(selectedMode)
     ? selectedMode.flatMap(mode => dataMap[mode] || []) // Combine data for all selected modes
     : selectedMode
     ? dataMap[selectedMode.value]
     : null;
+*/
+    const filteredData = useMemo(() => {
+        if (!selectedMode || !Array.isArray(selectedMode)) return null;
+        return selectedMode.flatMap((mode) => dataMap[mode] || []);
+    }, [selectedMode]);
 
     const drugSeziureFilteredData = useMemo(() => {
-        if (!filteredData || filteredData.length === 0) {
-            console.log('Filtered Data is empty.');
-            return [];
-        }
-    
-        const filtered = filteredData.filter(item => {
+        if (!filteredData || filteredData.length === 0) return [];
+        return filteredData.filter((item) => {
             const year = Number(item.Year);
-            return year >= yearMin && year <= yearMax && !isNaN(year); // Ensure valid years
+            return year >= yearRange.minYear && year <= yearRange.maxYear && !isNaN(year);
         });
-    
-        console.log('Drug Seziure Filtered Data:', filtered);
-        return filtered;
-    }, [filteredData, yearMin, yearMax]);
+    }, [filteredData, yearRange]);
     
     const totalsByCountryDrugGroupAndYear = useMemo(() => {
         if (!drugSeziureFilteredData || drugSeziureFilteredData.length === 0) return {};
@@ -133,24 +131,24 @@ const Sidebar = ({onFilterChange}) => {
 
     const yearOptions = useMemo(() => {
         if (!filteredData || filteredData.length === 0) {
-            return { minYear: yearMin, maxYear: yearMax };
+            return { minYear: yearStatic.minYear, maxYear: yearStatic.maxYear };
         }
 
         const years = filteredData
-        .map((item) => Number(item.Year)) // Convert Year to a number
-        .filter((year) => !isNaN(year)) // Exclude invalid years
-        .sort((a, b) => a - b); // Sort in ascending order
+            .map((item) => Number(item.Year)) // Convert Year to a number
+            .filter((year) => !isNaN(year)) // Exclude invalid years
+            .sort((a, b) => a - b); // Sort in ascending order
 
         if (years.length === 0) {
-            return { minYear: yearMin, maxYear: yearMax }; // Default range if no valid years found
-         }
+            return { minYear: yearStatic.minYear, maxYear: yearStatic.maxYear }; // Default to static if no valid years
+        }
 
         // Find the minimum and maximum year within the filtered range
         const minYear = Math.min(...years);
         const maxYear = Math.max(...years);
-    
+
         return { minYear, maxYear };
-    }, [filteredData, yearMin, yearMax]);
+    }, [filteredData, yearStatic]);
 
     const DrugOptions = useMemo(() => {
         if (!filteredData || filteredData.length === 0) {
@@ -185,25 +183,18 @@ const Sidebar = ({onFilterChange}) => {
     };
 
     const handleYearChange = (yearRange) => {
-        console.log("Input yearRange:", yearRange); // Log the input values
+        const newRange = { minYear: yearRange[0], maxYear: yearRange[1] };
+        setYearRange(newRange);
         const payload = { year: yearRange };
-        console.log("Payload to onFilterChange:", payload); // Log the output payload
         onFilterChange(payload);
     };
 
     // Debug
     useEffect(() => {
-        
-        if (yearOptions.minYear !== yearRange.minYear || yearOptions.maxYear !== yearRange.maxYear) {
-            setYearRange({ minYear: yearOptions.minYear, maxYear: yearOptions.maxYear });
+        if (yearOptions.minYear !== yearStatic.minYear || yearOptions.maxYear !== yearStatic.maxYear) {
+            setYearStatic({ minYear: yearOptions.minYear, maxYear: yearOptions.maxYear });
         }
-        /*
-        console.log('Updated selectedModes:', selectedMode);
-        console.log('Filtered Data:', filteredData);
-        console.log('Seizure Data:', dataMap['seizure']);
-        */
         console.log('Dynamic Year Options', yearOptions);
-        
         console.log('FilteredSeziure Data:', drugSeziureFilteredData);
         console.log('Total Kilograms by Drug Group:', totalsByCountryDrugGroupAndYear);
     }, [yearOptions,  yearRange, totalsByCountryDrugGroupAndYear]);
@@ -221,8 +212,8 @@ const Sidebar = ({onFilterChange}) => {
                 onChange={handleRegionChange}
             />
             <Range 
-                min={yearRange.minYear} 
-                max={yearRange.maxYear}
+                min={yearStatic.minYear} 
+                max={yearStatic.maxYear}
                 step={1} 
                 name="Year" 
                 onChange={handleYearChange}
