@@ -65,6 +65,78 @@ const Dashboard = () => {
         }));
     };
 
+    // Filtered Seizure Data
+    const drugSeziureFilteredData = useMemo(() => {
+        if (!Drugdata || Drugdata.length === 0) return [];
+        return Drugdata.filter((item) => {
+            const year = Number(item.Year);
+            return (
+                year >= filters.year[0] &&
+                year <= filters.year[1] &&
+                (filters.region ? item["Country/Territory"] === filters.region : true) &&
+                (filters.drugs.length > 0 ? filters.drugs.includes(item["Drug group"]) : true)
+            );
+        });
+    }, [filters]);
+
+    // Processed Totals by Country, Drug Group, and Year
+    const totalsByCountryDrugGroupAndYear = useMemo(() => {
+        if (!drugSeziureFilteredData || drugSeziureFilteredData.length === 0) return [];
+
+        const totalsMap = {};
+
+        drugSeziureFilteredData.forEach((item) => {
+            const country = item['Country/Territory'];
+            const drugGroup = item['Drug group'];
+            const year = Number(item['Year']);
+            const msCode = item['msCode'];
+            const weight = parseFloat(item['Kilograms']) || 0;
+
+            if (country && drugGroup) {
+                if (!totalsMap[country]) totalsMap[country] = {};
+                if (!totalsMap[country][drugGroup]) {
+                    totalsMap[country][drugGroup] = {
+                        total: 0,
+                        years: {},
+                        msCodes: new Set(),
+                    };
+                }
+                totalsMap[country][drugGroup].total += weight;
+
+                if (!totalsMap[country][drugGroup].years[year]) {
+                    totalsMap[country][drugGroup].years[year] = 0;
+                }
+                totalsMap[country][drugGroup].years[year] += weight;
+
+                if (msCode) {
+                    totalsMap[country][drugGroup].msCodes.add(msCode);
+                }
+            }
+        });
+
+        const totalsArray = [];
+        Object.keys(totalsMap).forEach((country) => {
+            Object.keys(totalsMap[country]).forEach((drugGroup) => {
+                const { total, years, msCodes } = totalsMap[country][drugGroup];
+                totalsArray.push({
+                    country,
+                    drugGroup,
+                    total,
+                    years,
+                    msCodes: Array.from(msCodes),
+                });
+            });
+        });
+
+        return totalsArray;
+    }, [drugSeziureFilteredData]);
+
+    // Debug
+    useEffect(() => {
+        console.log('Filters updated:', filters);
+        console.log('Processed Seizure Data:', totalsByCountryDrugGroupAndYear);
+    }, [filters, totalsByCountryDrugGroupAndYear]);
+
     const filteredMapData = useMemo(() => {
         const result = {};
         // Mode에 따라 바뀌는 데이터
@@ -117,7 +189,7 @@ const Dashboard = () => {
                     <div className='row flex-grow-1' style={{ flex: 1 }}>
                         {/* Seizure */}
                         <div className='col-6 p-2 h-100'>
-                            <Seizure data={seizureData} />
+                            <Seizure data={totalsByCountryDrugGroupAndYear} />
                         </div>
                         {/* Price */}
                         <div className='col-6 p-2 h-100'>
