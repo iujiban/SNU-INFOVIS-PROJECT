@@ -12,6 +12,7 @@ const Map = ({data}) => {
     // Debug Data
     useEffect(() => {
         console.log('Map data updated:', data);
+        console.log("Container Map dimensions (useDimensions):", dimensions);
         // Use the data to render the map
     }, [data]);
     
