@@ -64,6 +64,36 @@ const Dashboard = () => {
             ...newFilters,
         }));
     };
+    // Filtered PrevalanceNPS Data
+    const filteredPrevalenceData = useMemo(() => {
+        if (!PrevalenceNPSdata || PrevalenceNPSdata.length === 0) return [];
+
+        return PrevalenceNPSdata.filter((item) => {
+            const year = Number(item.Year); // Ensure 'Year' is a number
+            const country = item["Country/Territory"];
+            const drugGroup = item["Drug group"];
+            const subRegion = item["Sub-region"];
+            const bestValue = parseFloat(item.Best) || 0; // Parse 'Best' as a float
+            const male = item.Male;
+            const female = item.Female;
+            const age = item.Age;
+
+            return (
+                year >= filters.year[0] && // Check if year is within range
+                year <= filters.year[1] &&
+                (filters.region ? country === filters.region : true) && // Filter by region if specified
+                (filters.subRegion ? subRegion === filters.subRegion : true) && // Filter by sub-region
+                (filters.drugs.length > 0 ? filters.drugs.includes(drugGroup) : true) && // Filter by drug group if specified
+                (filters.bestRange ? bestValue >= filters.bestRange[0] && bestValue <= filters.bestRange[1] : true) && // Filter by Best value range
+                (filters.male ? male === filters.male : true) && // Filter by Male value
+                (filters.female ? female === filters.female : true) && // Filter by Female value
+                (filters.age ? age === filters.age : true) // Filter by Age
+            );
+        });
+    }, [filters]); // Recalculate when filters change
+
+
+
 
     // Filtered Seizure Data
     const drugSeziureFilteredData = useMemo(() => {
@@ -131,12 +161,6 @@ const Dashboard = () => {
         return totalsArray;
     }, [drugSeziureFilteredData]);
 
-    // Debug
-    useEffect(() => {
-        console.log('Filters updated:', filters);
-        console.log('Processed Seizure Data:', totalsByCountryDrugGroupAndYear);
-    }, [filters, totalsByCountryDrugGroupAndYear]);
-
     const filteredMapData = useMemo(() => {
         const result = {};
         // Mode에 따라 바뀌는 데이터
@@ -153,11 +177,13 @@ const Dashboard = () => {
 
     }, [filters.mode]);
 
+    // Debug
     useEffect(() => {
-        // Apply the filters to fetch or filter data as needed
+        console.log('Prevalence Data: ', filteredPrevalenceData);
         console.log('Filters updated:', filters);
-    }, [filters]);
-
+        console.log('Processed Seizure Data:', totalsByCountryDrugGroupAndYear);
+    }, [filters, totalsByCountryDrugGroupAndYear]);
+    
     // UI 렌더링
     return (
         <div className='container-fluid'>
@@ -193,7 +219,7 @@ const Dashboard = () => {
                         </div>
                         {/* Price */}
                         <div className='col-6 p-2 h-100'>
-                            <Price data={priceData} />
+                            <Price data={filteredPrevalenceData} />
                         </div>
                     </div>
                 </div>
