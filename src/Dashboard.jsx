@@ -54,7 +54,7 @@ const Dashboard = () => {
         mode: [], 
         gender: 'all',
         // drugs: [],
-        drugs: "Amphetamines and Stimulants",
+        drugs: "Cannabis and Synthetic Cannabinoids",
         // region: null,
         region: 'Belgium',
         year: [2018, 2022],
