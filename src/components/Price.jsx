@@ -1,13 +1,17 @@
-import React, { useEffect, useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import * as d3 from "d3";
 import { useDimensions } from "../hooks/useDimensions";
+import ExpandButton from "./ui/ExpandButton";
+import Modal from "./ui/Modal";
 
-const Price = ({ data }) => {
+const PriceChart = ({ data, selectedCountry }) => {
     const containerRef = useRef();
     const svgRef = useRef();
+    const modalSvgRef = useRef();
     const dimensions = useDimensions(containerRef);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
-    useEffect(() => {
+    const createChart = (svgRef) => {
         if (!data || data.length === 0 || !dimensions.width || !dimensions.height) return;
 
         const margin = { top: 30, right: 200, bottom: 50, left: 50 };
@@ -42,9 +46,10 @@ const Price = ({ data }) => {
             )
         );
 
-        d3.select(svgRef.current).selectAll("*").remove();
+        const svg = d3.select(svgRef.current);
+        svg.selectAll("*").remove();
 
-        const svg = d3.select(svgRef.current)
+        svg
             .attr("width", dimensions.width)
             .attr("height", dimensions.height)
             .append("g")
@@ -101,18 +106,51 @@ const Price = ({ data }) => {
             .attr("y", (d, i) => i * 20 + 9)
             .attr("dy", "0.35em")
             .text((d) => d);
-    }, [data, dimensions]);
+    };
+
+    useEffect(() => {
+        createChart(svgRef);
+        if (isModalOpen) {
+            createChart(modalSvgRef);
+        }
+    }, [data, dimensions, selectedCountry, isModalOpen]);
 
     return (
         <div className="card h-100">
-            <div className="card-header">
-                <h5 className="card-title mb-0">Stacked Area Chart</h5>
+            <div className="card-header d-flex justify-content-between align-items-center">
+                <h5 className="card-title mb-0">{selectedCountry ? `Price Trends in ${selectedCountry}` : 'Global Price Trends'}</h5>
+                <ExpandButton onClick={() => setIsModalOpen(true)} />
             </div>
-            <div className="card-body" ref={containerRef}>
-                <svg ref={svgRef} style={{ width: "100%", height: "100%" }}></svg>
+            <div className="card-body p-0">
+                <div ref={containerRef} style={{ width: '100%', height: '100%' }}>
+                    <svg 
+                        ref={svgRef}
+                        style={{ 
+                            display: 'block',
+                            width: '100%',
+                            height: '100%'
+                        }}
+                    ></svg>
+                </div>
             </div>
+            <Modal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                title={selectedCountry ? `Price Trends in ${selectedCountry}` : 'Global Price Trends'}
+            >
+                <div style={{ width: '100%', height: '80vh' }}>
+                    <svg 
+                        ref={modalSvgRef}
+                        style={{ 
+                            display: 'block',
+                            width: '100%',
+                            height: '100%'
+                        }}
+                    ></svg>
+                </div>
+            </Modal>
         </div>
     );
 };
 
-export default Price;
+export default PriceChart;

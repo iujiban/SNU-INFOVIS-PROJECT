@@ -1,11 +1,15 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import { useDimensions } from '../hooks/useDimensions';
+import ExpandButton from './ui/ExpandButton';
+import Modal from './ui/Modal';
 
 const SeizureChart = ({ data, selectedCountry }) => {
     const containerRef = useRef();
     const svgRef = useRef();
+    const modalSvgRef = useRef();
     const dimensions = useDimensions(containerRef);
+    const [isModalOpen, setIsModalOpen] = useState(false);
 
     const customColors = {
         "Cannabis and Synthetic Cannabinoids": "#1f77b4", // Blue
@@ -78,10 +82,12 @@ const SeizureChart = ({ data, selectedCountry }) => {
             value: parseFloat(item.total) || 0, // Convert total to a float or default to 0
         }));
     };
+
     // Create Stacked Bar Chart
-    const createStackedBarChart = (processedData) => {
-        const { width, height } = dimensions;
-        const margin = { top: 20, right: 30, bottom: 120, left: 50 };
+    const createStackedBarChart = (processedData, svgRef) => {
+        const { width } = dimensions;
+        const height = window.innerHeight * 0.4 - 50; // Reduce height to accommodate legends
+        const margin = { top: 20, right: 30, bottom: 40, left: 50 }; // Reduced bottom margin
 
         const drugGroups = Array.from(
             new Set(
@@ -146,15 +152,17 @@ const SeizureChart = ({ data, selectedCountry }) => {
             .attr('transform', `translate(0,${height - margin.bottom})`)
             .call(d3.axisBottom(x))
             .selectAll('text')
-            .attr('transform', 'rotate(-45)')
-            .style('text-anchor', 'end');
+            .attr('transform', 'rotate(-45) translate(-5, 0)')  // Adjusted translation
+            .style('text-anchor', 'end')
+            .style('font-size', '10px');  // Reduced font size
 
         svg.append('g').attr('transform', `translate(${margin.left},0)`).call(d3.axisLeft(y));
     };
 
     // Create Pie Chart
-    const createPieChart = (processedData) => {
-        const { width, height } = dimensions;
+    const createPieChart = (processedData, svgRef) => {
+        const { width } = dimensions;
+        const height = Math.min(dimensions.height, window.innerHeight * 0.6); // Limit height to 60% of viewport
         const radius = Math.min(width, height) / 2 - 20;
     
         const svg = d3
@@ -198,12 +206,15 @@ const SeizureChart = ({ data, selectedCountry }) => {
             .attr('font-size', 10)
             .text((d) => `${d.data.label}: ${parseFloat(d.data.value || 0).toFixed(1)}%`);
     };
-    
+
     useEffect(() => {
         if (!data || !dimensions.width || !dimensions.height) return;
 
         const processedData = processDataForStackedBar(data);
-        createStackedBarChart(processedData);
+        createStackedBarChart(processedData, svgRef);
+        if (isModalOpen) {
+            createStackedBarChart(processedData, modalSvgRef);
+        }
         /*
         if (selectedCountry) {
             console.log("Processed Pie Data:", processedData);
@@ -215,58 +226,126 @@ const SeizureChart = ({ data, selectedCountry }) => {
             createStackedBarChart(processedData);
         }
         */
-    }, [data, selectedCountry, dimensions]);
+    }, [data, selectedCountry, dimensions, isModalOpen]);
 
     return (
-        <div ref={containerRef} className="card h-100">
-            <div className="card-header">
-                <h5 className="card-title mb-0">
-                    {selectedCountry ? `Drug Distribution in ${selectedCountry}` : 'Drug Seizure'}
-                </h5>
+        <div className="card h-100">
+            <div className="card-header d-flex justify-content-between align-items-center">
+                <h5 className="card-title mb-0">{selectedCountry ? `Drug Distribution in ${selectedCountry}` : 'Drug Seizure'}</h5>
+                <ExpandButton onClick={() => setIsModalOpen(true)} />
             </div>
-            <div className="card-body d-flex flex-column">
-                <svg ref={svgRef} style={{ flexGrow: 1, width: '100%', height: '100%' }}></svg>
-                <div className="color-legend" style={{ marginTop: '0px' }}>
-                    <h6 style={{ marginBottom: '5px' }}>Color Legend:</h6>
-                    <ul
-                        style={{
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            justifyContent: 'center',
-                            listStyleType: 'none',
-                            padding: 0,
-                            margin: 0,
+            <div className="card-body p-0 d-flex flex-column" style={{ height: '100%', overflow: 'hidden' }}>
+                <div ref={containerRef} style={{ flex: '1 1 auto', minHeight: 0, height: '70%' }}>
+                    <svg 
+                        ref={svgRef} 
+                        style={{ 
+                            display: 'block', 
+                            width: '100%',
+                            height: '100%'
                         }}
-                    >
+                    ></svg>
+                </div>
+                <div style={{ 
+                    padding: '8px',
+                    backgroundColor: '#f8f9fa',
+                    borderTop: '1px solid #dee2e6',
+                    height: '30%'
+                }}>
+                    <ul style={{
+                        display: 'flex',
+                        flexWrap: 'wrap',
+                        justifyContent: 'flex-start',
+                        alignItems: 'center',
+                        listStyleType: 'none',
+                        padding: 0,
+                        margin: 0,
+                        gap: '8px',
+                        height: '100%',
+                        overflow: 'auto'
+                    }}>
                         {Object.entries(customColors).map(([drugGroup, color]) => (
-                            <li
-                                key={drugGroup}
-                                style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    margin: '0px 5px',
-                                }}
-                            >
-                                <span
-                                    style={{
-                                        display: 'inline-block',
-                                        width: '15px',
-                                        height: '15px',
-                                        backgroundColor: color,
-                                        marginRight: '5px',
-                                    }}
-                                ></span>
+                            <li key={drugGroup} style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                marginRight: '12px',
+                                whiteSpace: 'nowrap',
+                                fontSize: '0.85rem'
+                            }}>
+                                <span style={{
+                                    display: 'inline-block',
+                                    width: '12px',
+                                    height: '12px',
+                                    backgroundColor: color,
+                                    marginRight: '6px',
+                                    borderRadius: '2px'
+                                }}></span>
                                 {drugGroup}
                             </li>
                         ))}
                     </ul>
                 </div>
             </div>
+            <Modal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                title={selectedCountry ? `Drug Distribution in ${selectedCountry}` : 'Drug Seizure'}
+            >
+                <div className="card h-100">
+                    <div className="card-body p-0 d-flex flex-column" style={{ height: '80vh', overflow: 'hidden' }}>
+                        <div style={{ flex: '1 1 auto', minHeight: 0, height: '80%' }}>
+                            <svg 
+                                ref={modalSvgRef} 
+                                style={{ 
+                                    display: 'block', 
+                                    width: '100%',
+                                    height: '100%'
+                                }}
+                            ></svg>
+                        </div>
+                        <div style={{ 
+                            padding: '8px',
+                            backgroundColor: '#f8f9fa',
+                            borderTop: '1px solid #dee2e6',
+                            height: '20%'
+                        }}>
+                            <ul style={{
+                                display: 'flex',
+                                flexWrap: 'wrap',
+                                justifyContent: 'flex-start',
+                                alignItems: 'center',
+                                listStyleType: 'none',
+                                padding: 0,
+                                margin: 0,
+                                gap: '8px',
+                                height: '100%',
+                                overflow: 'auto'
+                            }}>
+                                {Object.entries(customColors).map(([drugGroup, color]) => (
+                                    <li key={drugGroup} style={{
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        marginRight: '12px',
+                                        whiteSpace: 'nowrap',
+                                        fontSize: '0.85rem'
+                                    }}>
+                                        <span style={{
+                                            display: 'inline-block',
+                                            width: '12px',
+                                            height: '12px',
+                                            backgroundColor: color,
+                                            marginRight: '6px',
+                                            borderRadius: '2px'
+                                        }}></span>
+                                        {drugGroup}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
-    
-    
-    
 };
 
 export default SeizureChart;
