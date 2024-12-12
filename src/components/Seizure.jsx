@@ -85,9 +85,14 @@ const SeizureChart = ({ data, selectedCountry }) => {
 
     // Create Stacked Bar Chart
     const createStackedBarChart = (processedData, svgRef) => {
-        const { width } = dimensions;
-        const height = window.innerHeight * 0.4 - 50; // Reduce height to accommodate legends
-        const margin = { top: 20, right: 30, bottom: 40, left: 50 }; // Reduced bottom margin
+        // Get actual SVG dimensions
+        const svgElement = svgRef.current;
+        const svgWidth = svgElement.clientWidth || svgElement.parentElement.clientWidth;
+        const svgHeight = svgElement.clientHeight || svgElement.parentElement.clientHeight;
+        
+        const margin = { top: 20, right: 30, bottom: 40, left: 50 };
+        const width = svgWidth - margin.left - margin.right;
+        const height = svgHeight - margin.top - margin.bottom;
 
         const drugGroups = Array.from(
             new Set(
@@ -111,13 +116,13 @@ const SeizureChart = ({ data, selectedCountry }) => {
         const x = d3
             .scaleBand()
             .domain(processedData.map((d) => d.msCode))
-            .range([margin.left, width - margin.right])
+            .range([margin.left, width])
             .padding(0.1);
 
         const y = d3
             .scaleLinear()
             .domain([0, d3.max(series, (s) => d3.max(s, (d) => d[1]))])
-            .range([height - margin.bottom, margin.top]);
+            .range([height, margin.top]);
 
         const color = (drugGroup) => customColors[drugGroup] || "#ccc";
 
@@ -126,10 +131,10 @@ const SeizureChart = ({ data, selectedCountry }) => {
 
         const svg = d3
             .select(svgRef.current)
-            .attr('width', width)
-            .attr('height', height)
-            .attr('viewBox', `0 0 ${width} ${height}`)
-            .attr('preserveAspectRatio', 'xMidYMid meet');
+            .attr('width', svgWidth)
+            .attr('height', svgHeight)
+            .attr('viewBox', `0 0 ${svgWidth} ${svgHeight}`)
+            .attr('preserveAspectRatio', 'xMinYMin meet');
 
         svg
             .append('g')
@@ -149,27 +154,30 @@ const SeizureChart = ({ data, selectedCountry }) => {
 
         svg
             .append('g')
-            .attr('transform', `translate(0,${height - margin.bottom})`)
+            .attr('transform', `translate(0,${height})`)
             .call(d3.axisBottom(x))
             .selectAll('text')
-            .attr('transform', 'rotate(-45) translate(-5, 0)')  // Adjusted translation
+            .attr('transform', 'rotate(-45) translate(-5, 0)')
             .style('text-anchor', 'end')
-            .style('font-size', '10px');  // Reduced font size
+            .style('font-size', '10px');
 
-        svg.append('g').attr('transform', `translate(${margin.left},0)`).call(d3.axisLeft(y));
+        svg.append('g')
+            .attr('transform', `translate(${margin.left},0)`)
+            .call(d3.axisLeft(y));
     };
 
     // Create Pie Chart
     const createPieChart = (processedData, svgRef) => {
-        const { width } = dimensions;
-        const height = Math.min(dimensions.height, window.innerHeight * 0.6); // Limit height to 60% of viewport
-        const radius = Math.min(width, height) / 2 - 20;
+        const svgElement = svgRef.current;
+        const svgWidth = svgElement.clientWidth || svgElement.parentElement.clientWidth;
+        const svgHeight = svgElement.clientHeight || svgElement.parentElement.clientHeight;
+        const radius = Math.min(svgWidth, svgHeight) / 2 - 40;
     
         const svg = d3
             .select(svgRef.current)
-            .attr('width', width)
-            .attr('height', height)
-            .attr('viewBox', `0 0 ${width} ${height}`)
+            .attr('width', svgWidth)
+            .attr('height', svgHeight)
+            .attr('viewBox', `0 0 ${svgWidth} ${svgHeight}`)
             .attr('preserveAspectRatio', 'xMidYMid meet');
     
         svg.selectAll('*').remove();
@@ -181,7 +189,7 @@ const SeizureChart = ({ data, selectedCountry }) => {
     
         const pieData = pie(processedData);
     
-        const g = svg.append('g').attr('transform', `translate(${width / 2}, ${height / 2})`);
+        const g = svg.append('g').attr('transform', `translate(${svgWidth / 2}, ${svgHeight / 2})`);
     
         g.selectAll('path')
             .data(pieData)
@@ -235,12 +243,12 @@ const SeizureChart = ({ data, selectedCountry }) => {
                 <ExpandButton onClick={() => setIsModalOpen(true)} />
             </div>
             <div className="card-body p-0 d-flex flex-column" style={{ height: '100%', overflow: 'hidden' }}>
-                <div ref={containerRef} style={{ flex: '1 1 auto', minHeight: 0, height: '70%' }}>
+                <div ref={containerRef} style={{ flex: '1 1 auto', minHeight: 0, height: '70%', overflowX: 'auto'}}>
                     <svg 
                         ref={svgRef} 
                         style={{ 
                             display: 'block', 
-                            width: '100%',
+                            width: '500%',
                             height: '100%'
                         }}
                     ></svg>
@@ -291,13 +299,13 @@ const SeizureChart = ({ data, selectedCountry }) => {
                 title={selectedCountry ? `Drug Distribution in ${selectedCountry}` : 'Drug Seizure'}
             >
                 <div className="card h-100">
-                    <div className="card-body p-0 d-flex flex-column" style={{ height: '80vh', overflow: 'hidden' }}>
-                        <div style={{ flex: '1 1 auto', minHeight: 0, height: '80%' }}>
+                    <div className="card-body p-0 d-flex flex-column" style={{ height: '80vh', overflow: 'hidden'}}>
+                        <div style={{ flex: '1 1 auto', minHeight: 0, height: '80%', overflowX: 'auto' }}>
                             <svg 
                                 ref={modalSvgRef} 
                                 style={{ 
                                     display: 'block', 
-                                    width: '100%',
+                                    width: '500%',
                                     height: '100%'
                                 }}
                             ></svg>
