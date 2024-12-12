@@ -317,30 +317,30 @@ const Dashboard = () => {
                     </div>
                 </nav>
             </div>
-            <div className='row' style={{ height: 'calc(100vh - 150px)' }}>
+            <div className='row'>
                 {/* Sidebar */}
-                <div className='col-2 p-2 d-flex flex-column' style={{ height: '100%' }}>
+                <div className='col-2 p-2'>
                     <Sidebar onFilterChange={handleFilterChange} />
                 </div>
                 {/* Main Content */}
-                <div className='col-10 p-2 d-flex flex-column' style={{ height: '100%' }}>
-                    <div className='row flex-grow-1' style={{ flex: 1 }}>
+                <div className='col-10 p-2'>
+                    <div className='row'>
                         {/* Map */}
-                        <div className='col-6 p-2 h-100'>
+                        <div className='col-6 p-2' style={{ height: '400px' }}>
                             <WorldMap data ={totalsByCountryDrugGroupAndYear}/>
                         </div>
                         {/* Prevalence */}
-                        <div className='col-6 p-2 h-100'>
+                        <div className='col-6 p-2' style={{ height: '400px' }}>
                             <Prevalence data1={prevalenceData1} data2={prevalenceData2} />
                         </div>
                     </div>
-                    <div className='row flex-grow-1' style={{ flex: 1 }}>
+                    <div className='row'>
                         {/* Seizure */}
-                        <div className='col-6 p-2 h-100'>
+                        <div className='col-6 p-2' style={{ height: '400px' }}>
                             <Seizure data={totalsByCountryDrugGroupAndYear} selectedCountry={filters.region.country} />
                         </div>
                         {/* Price */}
-                        <div className='col-6 p-2 h-100'>
+                        <div className='col-6 p-2' style={{ height: '400px' }}>
                             <Price data={filteredPrevalenceData} />
                         </div>
                     </div>
