@@ -25,7 +25,7 @@ const CheckboxStack = ({ label, options, onChange, singleSelect = false }) => {
             <div className="card-body">
                 <h6 className="form-label">{label}</h6>
                 {options.map((option, index) => (
-                    <div className="form-check" key={index}>
+                    <div className="form-check" style={{ overflow: 'hidden' }} key={index}>
                         <input 
                             className="form-check-input" 
                             type="checkbox" 
