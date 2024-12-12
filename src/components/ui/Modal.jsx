@@ -10,7 +10,8 @@ const Modal = ({ isOpen, onClose, children, title }) => {
                 style={{ display: 'block', backgroundColor: 'rgba(0,0,0,0.5)' }}
                 onClick={onClose}
             >
-                <div className="modal-dialog modal-dialog-centered modal-lg"
+                <div className="modal-dialog modal-dialog-centered modal-xl"
+                    style={{ maxWidth: '98%', margin: '10px auto' }}
                     onClick={e => e.stopPropagation()}
                 >
                     <div className="modal-content">
