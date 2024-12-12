@@ -7,6 +7,7 @@ import React, {useEffect, useState, useMemo} from 'react';
 // data
 import Seziure from '../data/Drug_seizures_2018_2022.json'
 import Prevalence from '../data/Prevalence_of_drug_use_NPS_General.json';
+import NonNPSPrevalence from '../data/Prevalence_of_drug_use_NonNPS_General.json'
 import Price from '../data/Prices_of_drugs.json'
 
 const modeOptions = [
@@ -26,20 +27,6 @@ const ageOptions = [
     {value: 'youth', label: 'Youth'},
 ];
 
-const drugOptions = [
-    { type: 'Opioid', name: 'Heroin', type: 'Natural' },
-    { type: 'Opioid', name: 'Morphine', type: 'Natural' },
-    { type: 'Opioid', name: 'Fentanyl', type: 'Synthetic' },
-    { type: 'Opioid', name: 'Oxycodone', type: 'Semi-synthetic' },
-    { type: 'Benzo', name: 'Xanax', type: 'Short-acting' },
-    { type: 'Benzo', name: 'Valium', type: 'Long-acting' },
-    { type: 'Benzo', name: 'Ativan', type: 'Short-acting' },
-    { type: 'Benzo', name: 'Klonopin', type: 'Long-acting' },
-    { type: 'Non-Opioid', name: 'Cocaine', type: 'Stimulant' },
-    { type: 'Non-Opioid', name: 'Methamphetamine', type: 'Stimulant' },
-    { type: 'Non-Opioid', name: 'Cannabis', type: 'Cannabinoid' },
-    { type: 'Non-Opioid', name: 'MDMA', type: 'Empathogen' }
-];
 
 const yearMin = 2018;
 const yearMax = 2022;
@@ -53,7 +40,7 @@ const Sidebar = ({onFilterChange}) => {
 
     const dataMap = {
         seizure: Seziure,
-        prevalence: Prevalence,
+        prevalence: [...Prevalence, ...NonNPSPrevalence],
         price: Price,
     }
 
@@ -69,26 +56,36 @@ const Sidebar = ({onFilterChange}) => {
     ? dataMap[selectedMode.value]
     : null;
 */
-    const filteredData = useMemo(() => {
-        if (!selectedMode || !Array.isArray(selectedMode)) return null;
-        return selectedMode.flatMap((mode) => dataMap[mode] || []);
-    }, [selectedMode]);
+const filteredData = useMemo(() => {
+    if (!selectedMode || !Array.isArray(selectedMode)) return null;
 
+    // Flatten the array of data for selected modes
+    return selectedMode.flatMap((mode) => dataMap[mode] || []);
+}, [selectedMode]);
 
-    const regionOptions = useMemo(() => {
-        if (!filteredData || filteredData.length === 0) {
-            return [];
+const regionOptions = useMemo(() => {
+    if (!filteredData || filteredData.length === 0) {
+        console.log('Filtered Data is Empty');
+        return [];
+    }
+
+    const uniqueRegions = new Map();
+
+    filteredData.forEach((item) => {
+        const { Region, SubRegion, 'Country/Territory': CountryTerritory } = item; // Explicitly quote 'Country/Territory'
+        if (Region && SubRegion && CountryTerritory) {
+            uniqueRegions.set(
+                `${Region}-${SubRegion}-${CountryTerritory}`,
+                { Region: Region, SubRegion: SubRegion, Country: CountryTerritory }
+            );
         }
-        // Extract unique continent-country combinations from filteredData
-        const uniqueRegions = new Map();
-        filteredData.forEach((item) => {
-            const { Region, 'Country/Territory': CountryTerritory } = item; // Adjust keys to match dataset structure
-            if (Region && CountryTerritory) {
-                uniqueRegions.set(`${Region}-${CountryTerritory}`, { region: Region, country: CountryTerritory });
-            }
-        });
-        return Array.from(uniqueRegions.values());
-    }, [filteredData]);
+    });
+
+    const result = Array.from(uniqueRegions.values());
+    console.log('Dynamic Region Options:', result); // Debug generated options
+    return result;
+}, [filteredData]);
+
 
     const yearOptions = useMemo(() => {
         if (!filteredData || filteredData.length === 0) {
@@ -115,15 +112,23 @@ const Sidebar = ({onFilterChange}) => {
         if (!filteredData || filteredData.length === 0) {
             return [];
         }
+    
         const uniqueDrugs = new Map();
+    
+        // Extract unique Drug group and Drug combinations
         filteredData.forEach((item) => {
-            const { 'Drug group': drugGroup, Drug } = item; // Extract relevant fields
+            const { 'Drug group': drugGroup, Drug } = item || {}; // Extract relevant fields
             if (drugGroup && Drug) {
-                uniqueDrugs.set(`${drugGroup}-${Drug}`, { group: drugGroup, name: Drug });
+                uniqueDrugs.set(
+                    `${drugGroup}-${Drug}`, // Use a unique key for each combination
+                    { type: drugGroup, name: Drug } // Store the data structure for the dropdown
+                );
             }
         });
     
-        return Array.from(uniqueDrugs.values()); // Convert Map values to an array
+        // Convert Map values to an array
+        const result = Array.from(uniqueDrugs.values());
+        return result;
     }, [filteredData]);
     
 
@@ -136,11 +141,20 @@ const Sidebar = ({onFilterChange}) => {
     };
 
     const handleDrugChange = (selectedDrugs) => {
-        onFilterChange({ drugs: selectedDrugs });
+        const { type: drugGroup, name: drug } = selectedDrugs || {}; 
+        onFilterChange({ drugs: { drugGroup, drug } });
     };
 
     const handleRegionChange = (selectedRegion) => {
-        onFilterChange({ region: selectedRegion });
+        const { Region: region, SubRegion: subRegion, Country: country } = selectedRegion || {}; 
+        console.log('Selected Region:', selectedRegion);
+        onFilterChange({
+            region: {
+                region: region || null,
+                subRegion: subRegion || null,
+                country: country || null,
+            },
+        });
     };
 
     const handleYearChange = (yearRange) => {
@@ -155,10 +169,7 @@ const Sidebar = ({onFilterChange}) => {
         if (yearOptions.minYear !== yearStatic.minYear || yearOptions.maxYear !== yearStatic.maxYear) {
             setYearStatic({ minYear: yearOptions.minYear, maxYear: yearOptions.maxYear });
         }
-        //console.log('Dynamic Year Options', yearOptions);
-        //console.log('FilteredSeziure Data:', drugSeziureFilteredData);
-        // console.log('Total Kilograms by Drug Group:', totalsByCountryDrugGroupAndYear);
-    }, [yearOptions,  yearRange]);
+        }, [yearOptions,  yearRange]);
     return (
         <div className="sidebar">
             <CheckboxStack 
@@ -169,7 +180,7 @@ const Sidebar = ({onFilterChange}) => {
             <MultiLevelDropdown 
                 label="Region" 
                 options={regionOptions}
-                levels={['region', 'country']} 
+                levels={['Region', 'SubRegion' ,'Country' ]} 
                 onChange={handleRegionChange}
             />
             <Range 

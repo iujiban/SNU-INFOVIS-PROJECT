@@ -39,6 +39,8 @@ const MultiLevelDropdown = ({ label, options, levels, onChange }) => {
         });
         
         setSelections(newSelections);
+
+        onChange(newSelections);
     };
 
     return (
@@ -48,19 +50,17 @@ const MultiLevelDropdown = ({ label, options, levels, onChange }) => {
             <div className="d-flex flex-column gap-2">
                 {levels.map((level, index) => (
                     <select
-                        key={level}
-                        className="form-select"
-                        value={selections[level] || ''}
-                        onChange={(e) => handleChange(level, e.target.value)}
-                        disabled={index > 0 && !selections[levels[index - 1]]}
-                    >
-                        <option value="">{`Select ${level}`}</option>
-                        {filteredOptions[level]?.map((value, i) => (
-                            <option key={i} value={value}>
-                                {value}
-                            </option>
-                        ))}
-                    </select>
+                    key={level}
+                    className="form-select"
+                    value={selections[level] || ''} // Fallback to empty string
+                    onChange={(e) => handleChange(level, e.target.value)}
+                    disabled={index > 0 && !selections[levels[index - 1]]} // Disable if no parent is selected
+                >
+                    <option value="">{`Select ${level}`}</option>
+                    {filteredOptions[level]?.map((value, i) => (
+                        <option key={i} value={value || ''}>{value || `Select ${level}`}</option> // Fallback value
+                    ))}
+                </select>
                 ))}
             </div>
         </div>
