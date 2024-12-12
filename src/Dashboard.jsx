@@ -53,8 +53,10 @@ const Dashboard = () => {
     const [filters, setFilters] = useState({
         mode: [], 
         gender: 'all',
-        drugs: [],
-        region: null,
+        // drugs: [],
+        drugs: "Amphetamines and Stimulants",
+        // region: null,
+        region: 'Belgium',
         year: [2018, 2022],
     });
     
@@ -92,6 +94,30 @@ const Dashboard = () => {
         });
     }, [filters]); // Recalculate when filters change
 
+    const FilteredPriceData = useMemo(() => {
+        if (!PriceData || PriceData.length === 0) return [];
+
+        return PriceData.filter((item) => {
+            const year = Number(item.Year); // Ensure 'Year' is a number
+            const country = item["Country/Territory"];
+            const drugGroup = item["Drug group"];
+            const subRegion = item["Sub-region"];
+            const typical_USD = parseFloat(item.Typical_USD) || 0; // Parse 'Best' as a float
+            const minimum_USD = parseFloat(item.Minimum_USD) || 0; // Parse 'Best' as a float
+            const maximum_USD = parseFloat(item.Maximum_USD) || 0; // Parse 'Best' as a float
+
+
+            return (
+                year >= filters.year[0] && // Check if year is within range
+                year <= filters.year[1] &&
+                (filters.region ? country === filters.region : true) && // Filter by region if specified
+                (filters.subRegion ? subRegion === filters.subRegion : true) && // Filter by sub-region
+                (filters.drugs.length > 0 ? filters.drugs.includes(item["Drug group"]) : true)                
+                // (filters.drugs.length > 0 ? filters.drugs.includes(drugGroup) : true)  // Filter by drug group if specified
+                // (filters.bestRange ? bestValue >= filters.bestRange[0] && bestValue <= filters.bestRange[1] : true)
+            );
+        });
+    }, [filters]); // Recalculate when filters change
 
 
 
@@ -108,6 +134,7 @@ const Dashboard = () => {
             );
         });
     }, [filters]);
+
 
     // Processed Totals by Country, Drug Group, and Year
     const totalsByCountryDrugGroupAndYear = useMemo(() => {
@@ -143,6 +170,8 @@ const Dashboard = () => {
                 }
             }
         });
+
+        
 
         const totalsArray = [];
         Object.keys(totalsMap).forEach((country) => {
@@ -182,6 +211,8 @@ const Dashboard = () => {
         console.log('Prevalence Data: ', filteredPrevalenceData);
         console.log('Filters updated:', filters);
         console.log('Processed Seizure Data:', totalsByCountryDrugGroupAndYear);
+        console.log('Price Data:', FilteredPriceData);
+
     }, [filters, totalsByCountryDrugGroupAndYear]);
     
     // UI 렌더링
@@ -219,7 +250,9 @@ const Dashboard = () => {
                         </div>
                         {/* Price */}
                         <div className='col-6 p-2 h-100'>
-                            <Price data={filteredPrevalenceData} />
+                            {/* <Price data={filteredPrevalenceData} /> */}
+                            <Price data={FilteredPriceData} />
+
                         </div>
                     </div>
                 </div>
