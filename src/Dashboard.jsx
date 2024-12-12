@@ -9,7 +9,7 @@ import PriceData from './data/Prices_of_drugs.json'
 
 // Components
 import Sidebar from './components/Sidebar';
-import Map from './components/WorldMap';
+import WorldMap from './components/WorldMap';
 import Prevalence from './components/Prevalence';
 import Seizure from './components/Seizure';
 import Price from './components/Price';
@@ -17,7 +17,6 @@ import Price from './components/Price';
 // Bootstrap
 import 'bootstrap/dist/css/bootstrap.min.css';
 import 'bootstrap/dist/js/bootstrap.bundle.min';
-import WorldMap from './components/WorldMap';
 
 // Seizure data
 export const seizureData = [
