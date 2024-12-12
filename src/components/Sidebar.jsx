@@ -82,7 +82,7 @@ const regionOptions = useMemo(() => {
     });
 
     const result = Array.from(uniqueRegions.values());
-    console.log('Dynamic Region Options:', result); // Debug generated options
+    
     return result;
 }, [filteredData]);
 
@@ -205,7 +205,7 @@ const regionOptions = useMemo(() => {
             <MultiLevelDropdown 
                 label="Drug" 
                 options={DrugOptions}
-                levels={['type', 'name']}
+                levels={['type']}
                 onChange={handleDrugChange} 
             />
         </div>

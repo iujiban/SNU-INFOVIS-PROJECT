@@ -94,9 +94,6 @@ const Dashboard = () => {
         });
     }, [filters]); // Recalculate when filters change
 
-
-
-
     // Filtered Seizure Data
     const drugSeziureFilteredData = useMemo(() => {
         if (!Drugdata || Drugdata.length === 0) return [];
@@ -107,18 +104,18 @@ const Dashboard = () => {
             const matchesSubRegion = filters.region.subRegion ? item["SubRegion"] === filters.region.subRegion : true;
             const matchesCountry = filters.region.country ? item["Country/Territory"] === filters.region.country : true;
             const matchesDrugs = filters.drugs.drugGroup ? item["Drug group"] === filters.drugs.drugGroup : true;
-    
+            const matchesDrugsType = filters.drugs.drug ? item["Drug"] === filters.drugs.drugGroup : true; 
             return (
                 year >= filters.year[0] &&
                 year <= filters.year[1] &&
                 matchesRegion &&
                 matchesSubRegion &&
                 matchesCountry &&
-                matchesDrugs
+                matchesDrugs &&
+                matchesDrugsType
             );
         });
     }, [filters]);
-
     // Map Processed Totals by Country and Year
     const totalsByCountryAndYearForArray = useMemo(() => {
         if (!drugSeziureFilteredData || drugSeziureFilteredData.length === 0) {
@@ -228,6 +225,7 @@ const Dashboard = () => {
         return resultArray;
     }, [drugSeziureFilteredData]);
 
+
     // Processed Totals by Country, Drug Group, and Year
     const totalsByCountryDrugGroupAndYear = useMemo(() => {
         if (!drugSeziureFilteredData || drugSeziureFilteredData.length === 0) return [];
@@ -237,6 +235,7 @@ const Dashboard = () => {
         drugSeziureFilteredData.forEach((item) => {
             const country = item['Country/Territory'];
             const drugGroup = item['Drug group'];
+            const drugType = item['Drug'];
             const year = Number(item['Year']);
             const msCode = item['msCode'];
             const weight = parseFloat(item['Kilograms']) || 0;
@@ -248,14 +247,34 @@ const Dashboard = () => {
                         total: 0,
                         years: {},
                         msCodes: new Set(),
+                        drugTypes: {},
                     };
                 }
+
+                // Initialize drugType-level entry
+                if (!totalsMap[country][drugGroup].drugTypes[drugType]) {
+                    totalsMap[country][drugGroup].drugTypes[drugType] = {
+                        total: 0,
+                        years: {},
+                    };
+                }
+
+                // Add Weight to total for drugGruop
                 totalsMap[country][drugGroup].total += weight;
+
+                // Add weight to total for drugType
+                totalsMap[country][drugGroup].drugTypes[drugType].total += weight;
 
                 if (!totalsMap[country][drugGroup].years[year]) {
                     totalsMap[country][drugGroup].years[year] = 0;
                 }
                 totalsMap[country][drugGroup].years[year] += weight;
+
+                if (!totalsMap[country][drugGroup].drugTypes[drugType].years[year]) {
+                    totalsMap[country][drugGroup].drugTypes[drugType].years[year] = 0;
+                }
+
+                totalsMap[country][drugGroup].drugTypes[drugType].years[year] += weight;
 
                 if (msCode) {
                     totalsMap[country][drugGroup].msCodes.add(msCode);
@@ -266,13 +285,20 @@ const Dashboard = () => {
         const totalsArray = [];
         Object.keys(totalsMap).forEach((country) => {
             Object.keys(totalsMap[country]).forEach((drugGroup) => {
-                const { total, years, msCodes } = totalsMap[country][drugGroup];
+                const { total, years, msCodes, drugTypes } = totalsMap[country][drugGroup];
+                const drugTypeArray = Object.keys(drugTypes).map((drugType) => ({
+                    drugType,
+                    total: drugTypes[drugType].total,
+                    years: drugTypes[drugType].years,
+                }));
+
                 totalsArray.push({
                     country,
                     drugGroup,
                     total,
                     years,
                     msCodes: Array.from(msCodes),
+                    drugTypes: drugTypeArray,
                 });
             });
         });
@@ -302,7 +328,7 @@ const Dashboard = () => {
        // console.log('Filters updated:', filters);
        // console.log('Selected Country in Dashboard:', filters.region?.country);
        // console.log('Filteres DrugSeziure Data: ', drugSeziureFilteredData);
-       // console.log('Processed Seizure Data:', totalsByCountryDrugGroupAndYear);
+       console.log('Processed Seizure Data:', totalsByCountryDrugGroupAndYear);
        console.log('Filter Map', filteredMapData)
        console.log('totalsByCountryAndYearForMap', totalsByCountryAndYearForArray);
     }, [filters, totalsByCountryDrugGroupAndYear]);
@@ -338,7 +364,7 @@ const Dashboard = () => {
                     <div className='row flex-grow-1' style={{ flex: 1 }}>
                         {/* Seizure */}
                         <div className='col-6 p-2 h-100'>
-                            <Seizure data={totalsByCountryDrugGroupAndYear} selectedCountry={filters.region.country} />
+                            <Seizure data={totalsByCountryDrugGroupAndYear} selectedCountry={filters.region.country} selectedDrugType={filters.drugs.drugGroup}/>
                         </div>
                         {/* Price */}
                         <div className='col-6 p-2 h-100'>
