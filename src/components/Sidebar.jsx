@@ -205,7 +205,7 @@ const regionOptions = useMemo(() => {
             <MultiLevelDropdown 
                 label="Drug" 
                 options={DrugOptions}
-                levels={['type', 'name']}
+                levels={['type']}
                 onChange={handleDrugChange} 
             />
         </div>
