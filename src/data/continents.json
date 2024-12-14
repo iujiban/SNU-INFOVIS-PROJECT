@@ -1,0 +1,88 @@
+[
+    {
+        "continent_code": "AF",
+        "continent_name": "Africa",
+        "countries": [
+            "DZA", "AGO", "BWA", "BDI", "CMR", "CPV", "CAF",
+            "TCD", "COM", "MYT", "COG", "COD", "BEN", "GNQ",
+            "ETH", "ERI", "DJI", "GAB", "GMB", "GHA", "GIN",
+            "CIV", "KEN", "LSO", "LBR", "LBY", "MDG", "MWI",
+            "MLI", "MRT", "MUS", "MAR", "MOZ", "NAM", "NER",
+            "NGA", "GNB", "REU", "RWA", "SHN", "STP", "SEN",
+            "SYC", "SLE", "SOM", "ZAF", "ZWE", "SSD", "ESH",
+            "SDN", "SWZ", "TGO", "TUN", "UGA", "EGY", "TZA",
+            "BFA", "ZMB", "SDS", "ABV"
+        ]
+    },
+    {
+        "continent_code": "AN",
+        "continent_name": "Antarctica",
+        "countries": [
+            "ATA",
+            "BVT",
+            "SGS",
+            "ATF",
+            "HMD"
+        ]
+    },
+    {
+        "continent_code": "AS",
+        "continent_name": "Asia",
+        "countries": [
+            "AFG", "ARM", "AZE", "BHR", "BGD", "BTN", "IOT",
+            "BRN", "MMR", "KHM", "LKA", "CHN", "TWN", "CXR",
+            "CCK", "CYP", "GEO", "PSE", "HKG", "IND", "IDN",
+            "IRN", "IRQ", "ISR", "JPN", "JOR", "KAZ", "PRK",
+            "KOR", "KWT", "KGZ", "LAO", "LBN", "MAC", "MYS",
+            "MDV", "MNG", "OMN", "NPL", "PAK", "PHL", "TLS",
+            "QAT", "RUS", "SAU", "SGP", "VNM", "SYR", "TJK",
+            "THA", "ARE", "TUR", "TKM", "UZB", "YEM", "XAC",
+            "XGZ", "XKZ", "XVA", "XXK"
+        ]
+    },
+    {
+        "continent_code": "EU",
+        "continent_name": "Europe",
+        "countries": [
+            "ALB", "AND", "AUT", "BLR", "BEL", "BIH", "BGR",
+            "HRV", "CZE", "DNK", "EST", "FRO", "FIN", "ALA",
+            "FRA", "DEU", "GIB", "GRC", "VAT", "HUN", "ISL",
+            "IRL", "ITA", "LVA", "LIE", "LTU", "LUX", "MLT",
+            "MCO", "MDA", "MNE", "NLD", "NOR", "POL", "PRT",
+            "ROU", "RUS", "SMR", "SRB", "SVK", "SVN", "ESP",
+            "SJM", "SWE", "CHE", "UKR", "GBR", "GGY", "JEY",
+            "IMN", "XKX"
+        ]
+    },
+    {
+        "continent_code": "NA",
+        "continent_name": "North America",
+        "countries": [
+            "AIA", "ATG", "ABW", "BHS", "BRB", "BLZ", "BMU",
+            "BES", "VGB", "CAN", "CYM", "CRI", "CUB", "CUW",
+            "DMA", "DOM", "SLV", "GRL", "GRD", "GLP", "GTM",
+            "HTI", "HND", "JAM", "MTQ", "MEX", "MSR", "ANT",
+            "NIC", "UMI", "PAN", "PRI", "BLM", "KNA", "AIA",
+            "LCA", "MAF", "SPM", "VCT", "SXM", "TTO", "TCA",
+            "USA", "VIR"
+        ]
+    },
+    {
+        "continent_code": "OC",
+        "continent_name": "Oceania",
+        "countries": [
+            "ASM", "AUS", "NZL", "COK", "FJI", "PYF", "GUM",
+            "KIR", "MNP", "MHL", "FSM", "UMI", "NRU", "NCL",
+            "VUT", "NIU", "NFK", "PLW", "PNG", "MNP", "SLB",
+            "TKL", "TON", "TUV", "UMI", "WLF", "WSM", "TLS"
+        ]
+    },
+    {
+        "continent_code": "SA",
+        "continent_name": "South America",
+        "countries": [
+            "ARG", "BOL", "BRA", "CHL", "COL", "ECU", "FLK",
+            "GUF", "GUY", "PRY", "PER", "SUR", "URY", "VEN"
+        ]
+    }
+]

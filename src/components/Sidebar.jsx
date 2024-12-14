@@ -180,7 +180,7 @@ const regionOptions = useMemo(() => {
             <MultiLevelDropdown 
                 label="Region" 
                 options={regionOptions}
-                levels={['Region', 'SubRegion' ,'Country' ]} 
+                levels={['Region', 'Country' ]} 
                 onChange={handleRegionChange}
             />
             <Range 

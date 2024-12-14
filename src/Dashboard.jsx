@@ -327,7 +327,11 @@ const Dashboard = () => {
                     <div className='row'>
                         {/* Map */}
                         <div className='col-6 p-2' style={{ height: '400px' }}>
-                            <WorldMap data ={totalsByCountryDrugGroupAndYear}/>
+                            <WorldMap 
+                                data={totalsByCountryDrugGroupAndYear}
+                                selectedRegion={filters.region.region}
+                                selectedCountry={filters.region.country}
+                            />
                         </div>
                         {/* Prevalence */}
                         <div className='col-6 p-2' style={{ height: '400px' }}>
