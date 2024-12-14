@@ -17,44 +17,29 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
 
 
     const customColors = (selectedDrugType) => {
-        const groupColors = {
-            "Cannabis and Synthetic Cannabinoids": "#1f77b4", // Blue
-            "Cocaine and Derivatives": "#ff7f0e", // Orange
-            "Opioids and Opiates": "#2ca02c", // Green
-            "Amphetamines and Stimulants": "#d62728", // Red
-            "NPS": "#9467bd", // Purple
-            "Tranquillizers and Sedatives": "#7f7f7f", // Gray
-            "MDMA and Ecstasy-like Drugs": "#e377c2", // Pink
-            "Classic Hallucinogens": "#bcbd22", // Olive
-            "Miscellaneous": "#17becf" // Teal
-        }
+        const colors = {
+            "Cannabis and Synthetic Cannabinoids": "#8dd3c7",
+            "Cocaine and Derivatives": "#ffffb3",
+            "Opioids and Opiates": "#bebada",
+            "Amphetamines and Stimulants": "#fb8072",
+            "Classic Hallucinogens": "#80b1d3",
+            "Tranquillizers and Sedatives": "#fdb462",
+            "MDMA and Ecstasy-like Drugs": "#b3de69",
+            "NPS": "#fccde5",
+            "Miscellaneous": "#d9d9d9"
+        };
 
-        const typeColors = [
-            "#1f77b4", // Blue
-            "#ff7f0e", // Orange
-            "#2ca02c", // Green
-            "#d62728", // Red
-            "#9467bd", // Purple
-            "#8c564b", // Brown
-            "#e377c2", // Pink
-            "#7f7f7f", // Gray
-            "#bcbd22", // Olive
-            "#17becf", // Teal
-        ];
+        // If no drug type is selected, return all colors
+        if (!selectedDrugType) return colors;
 
-        // If no drug type is selected, return group colors
-        if (!selectedDrugType) return groupColors;
-
-        // If a drug type is selected, assign dynamic colors to each type
+        // If a drug type is selected, create a color map for selected types
         const colorMap = {};
-        let index = 0;
-        selectedDrugType.forEach((drugType) => {
-            colorMap[drugType] = typeColors[index % typeColors.length];
-            index++;
+        const colorValues = Object.values(colors);
+        selectedDrugType.forEach((drugType, index) => {
+            colorMap[drugType] = colorValues[index % colorValues.length];
         });
 
         return colorMap;
-
     };
 
     // Process data for Stacked Bar Chart
@@ -302,26 +287,20 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
     };
 
     const renderLegend = (selectedDrugType, selectedCountry) => {
-        // Do not render the legend if selectedDrugType or selectedCountry is defined
-        if (selectedDrugType || selectedCountry) return null;
-
         // Define default group colors
         const groupColors = {
-            "Cannabis and Synthetic Cannabinoids": "#1f77b4", // Blue
-            "Cocaine and Derivatives": "#ff7f0e", // Orange
-            "Opioids and Opiates": "#2ca02c", // Green
-            "Amphetamines and Stimulants": "#d62728", // Red
-            "NPS": "#9467bd", // Purple
-            "Tranquillizers and Sedatives": "#7f7f7f", // Gray
-            "MDMA and Ecstasy-like Drugs": "#e377c2", // Pink
-            "Classic Hallucinogens": "#bcbd22", // Olive
-            "Miscellaneous": "#17becf", // Teal
+            "Cannabis and Synthetic Cannabinoids": "#8dd3c7",
+            "Cocaine and Cocaine-type": "#ffffb3",
+            "Opioids": "#bebada",
+            "ATS": "#fb8072",
+            "Hallucinogens": "#80b1d3",
+            "Sedatives and Tranquilizers": "#fdb462",
+            "Solvents and Inhalants": "#b3de69",
+            "NPS": "#fccde5",
+            "Miscellaneous": "#d9d9d9"
         };
 
-        const legendColors = {};
-        Object.keys(groupColors).forEach((group) => {
-            legendColors[group] = groupColors[group];
-        });
+        const legendColors = selectedDrugType ? customColors(selectedDrugType) : groupColors;
 
         // Render the legend UI
         return (
@@ -413,8 +392,8 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
             .join('path')
             .attr('d', arc)
             .attr('fill', d => colorMap[d.data[0]] || "#ccc")
-            .attr('stroke', 'white')
-            .style('stroke-width', '2px');
+            .attr('stroke', '#FFFFFF')
+            .style('stroke-width', '0.5px');
 
         // Add hover interactions
         slices
@@ -427,13 +406,13 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
                 
                 d3.select(this)
                     .attr('stroke', 'black')
-                    .style('stroke-width', '3px');
+                    .style('stroke-width', '2px');
             })
             .on('mouseout', function() {
                 setSelectedBarData(null);
                 d3.select(this)
-                    .attr('stroke', 'white')
-                    .style('stroke-width', '2px');
+                    .attr('stroke', '#FFFFFF')
+                    .style('stroke-width', '0.5px');
             });
     };
 
