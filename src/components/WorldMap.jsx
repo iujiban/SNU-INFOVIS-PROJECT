@@ -183,10 +183,13 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
     useEffect(() => {
         const renderMap = (svgElement, containerElement, width, height) => {
             // Remove the data length check since we want to render the map even without data
-            if (!width || !worldGeoData) {
+            if (!width || !worldGeoData || !svgElement || !containerElement) {
                 console.log('Missing required data:', { 
                     width, 
-                    hasWorldGeoData: !!worldGeoData
+                    height,
+                    hasWorldGeoData: !!worldGeoData,
+                    hasSvgElement: !!svgElement,
+                    hasContainerElement: !!containerElement
                 });
                 return;
             }
@@ -358,13 +361,14 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
         };
 
         renderMap(svgRef.current, svgContainerRef.current, dimensions.width, dimensions.height);
-        if (isModalOpen) {
-            // Use window dimensions for modal
-            const modalWidth = window.innerWidth * 0.8;
-            const modalHeight = window.innerHeight * 0.8;
+        if (isModalOpen && modalSvgRef.current && modalSvgContainerRef.current) {
+            const modalContainer = modalSvgContainerRef.current;
+            const modalWidth = modalContainer.clientWidth;
+            const modalHeight = modalContainer.clientHeight;
+            console.log('Modal dimensions:', { modalWidth, modalHeight });
             renderMap(modalSvgRef.current, modalSvgContainerRef.current, modalWidth, modalHeight);
         }
-    }, [dimensions, worldGeoData, selectedRegion, selectedCountry, data]);
+    }, [dimensions, worldGeoData, selectedRegion, selectedCountry, data, isModalOpen]);
 
     return (
         <div className="card h-100" ref={containerRef}>
@@ -392,8 +396,16 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
                     width: '100%', 
                     height: '80vh',
                     padding: 0,
+                    overflow: 'hidden'
                 }}>
-                    <svg ref={modalSvgRef} style={{ width: '100%', height: '100%' }} />
+                    <svg 
+                        ref={modalSvgRef} 
+                        style={{ 
+                            width: '100%', 
+                            height: '100%',
+                            display: 'block'  // Remove any extra spacing
+                        }} 
+                    />
                 </div>
             </Modal>
         </div>
