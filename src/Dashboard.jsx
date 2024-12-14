@@ -52,13 +52,13 @@ export const priceData = [
 
 const Dashboard = () => {
     const [filters, setFilters] = useState({
-        mode: [], 
+        mode: [],
         gender: 'all',
         drugs: { drugGroup: null, drug: null },
         region: { region: null, subRegion: null, country: null },
         year: [2018, 2022],
     });
-    
+
     const handleFilterChange = (newFilters) => {
         setFilters((prevFilters) => ({
             ...prevFilters,
@@ -112,14 +112,14 @@ const Dashboard = () => {
     // Filtered Seizure Data
     const drugSeziureFilteredData = useMemo(() => {
         if (!Drugdata || Drugdata.length === 0) return [];
-        
+
         return Drugdata.filter((item) => {
             const year = Number(item.Year);
             const matchesRegion = filters.region.region ? item["Region"] === filters.region.region : true;
             const matchesSubRegion = filters.region.subRegion ? item["SubRegion"] === filters.region.subRegion : true;
             const matchesCountry = filters.region.country ? item["Country/Territory"] === filters.region.country : true;
             const matchesDrugs = filters.drugs.drugGroup ? item["Drug group"] === filters.drugs.drugGroup : true;
-    
+
             return (
                 year >= filters.year[0] &&
                 year <= filters.year[1] &&
@@ -137,16 +137,16 @@ const Dashboard = () => {
             console.warn('No filtered seizure data found');
             return [];
         }
-    
+
         const totalsMap = {};
-    
+
         // Build the hierarchical totals map
         drugSeziureFilteredData.forEach((item) => {
             const { Region: region, SubRegion: subRegion, 'Country/Territory': country, Year: year, Kilograms } = item;
             const weight = parseFloat(Kilograms) || 0;
-    
+
             if (!region || !subRegion || !country || !year || weight <= 0) return;
-    
+
             // Initialize region if not present
             if (!totalsMap[region]) {
                 totalsMap[region] = {
@@ -155,16 +155,16 @@ const Dashboard = () => {
                     subRegions: {},
                 };
             }
-    
+
             // Add to region total
             totalsMap[region].total += weight;
-    
+
             // Add to region year total
             if (!totalsMap[region].years[year]) {
                 totalsMap[region].years[year] = 0;
             }
             totalsMap[region].years[year] += weight;
-    
+
             // Initialize subRegion if not present
             if (!totalsMap[region].subRegions[subRegion]) {
                 totalsMap[region].subRegions[subRegion] = {
@@ -173,16 +173,16 @@ const Dashboard = () => {
                     countries: {},
                 };
             }
-    
+
             // Add to subRegion total
             totalsMap[region].subRegions[subRegion].total += weight;
-    
+
             // Add to subRegion year total
             if (!totalsMap[region].subRegions[subRegion].years[year]) {
                 totalsMap[region].subRegions[subRegion].years[year] = 0;
             }
             totalsMap[region].subRegions[subRegion].years[year] += weight;
-    
+
             // Initialize country if not present
             if (!totalsMap[region].subRegions[subRegion].countries[country]) {
                 totalsMap[region].subRegions[subRegion].countries[country] = {
@@ -190,20 +190,20 @@ const Dashboard = () => {
                     years: {},
                 };
             }
-    
+
             // Add to country total
             totalsMap[region].subRegions[subRegion].countries[country].total += weight;
-    
+
             // Add to country year total
             if (!totalsMap[region].subRegions[subRegion].countries[country].years[year]) {
                 totalsMap[region].subRegions[subRegion].countries[country].years[year] = 0;
             }
             totalsMap[region].subRegions[subRegion].countries[country].years[year] += weight;
         });
-    
+
         // Flatten the hierarchical structure into an array
         const resultArray = [];
-    
+
         Object.entries(totalsMap).forEach(([region, regionData]) => {
             // Add region-level data
             resultArray.push({
@@ -212,7 +212,7 @@ const Dashboard = () => {
                 total: regionData.total,
                 years: regionData.years,
             });
-    
+
             Object.entries(regionData.subRegions).forEach(([subRegion, subRegionData]) => {
                 // Add sub-region-level data
                 resultArray.push({
@@ -222,7 +222,7 @@ const Dashboard = () => {
                     parent: region,
                     years: subRegionData.years,
                 });
-    
+
                 Object.entries(subRegionData.countries).forEach(([country, countryData]) => {
                     // Add country-level data
                     resultArray.push({
@@ -235,7 +235,7 @@ const Dashboard = () => {
                 });
             });
         });
-    
+
         console.log('Flattened Array:', resultArray); // Debugging output
         return resultArray;
     }, [drugSeziureFilteredData]);
@@ -249,6 +249,7 @@ const Dashboard = () => {
         drugSeziureFilteredData.forEach((item) => {
             const country = item['Country/Territory'];
             const drugGroup = item['Drug group'];
+            const drugType = item['Drug'];
             const year = Number(item['Year']);
             const msCode = item['msCode'];
             const weight = parseFloat(item['Kilograms']) || 0;
@@ -260,14 +261,34 @@ const Dashboard = () => {
                         total: 0,
                         years: {},
                         msCodes: new Set(),
+                        drugTypes: {},
                     };
                 }
+
+                // Initialize drugType-level entry
+                if (!totalsMap[country][drugGroup].drugTypes[drugType]) {
+                    totalsMap[country][drugGroup].drugTypes[drugType] = {
+                        total: 0,
+                        years: {},
+                    };
+                }
+
+                // Add Weight to total for drugGruop
                 totalsMap[country][drugGroup].total += weight;
+
+                // Add weight to total for drugType
+                totalsMap[country][drugGroup].drugTypes[drugType].total += weight;
 
                 if (!totalsMap[country][drugGroup].years[year]) {
                     totalsMap[country][drugGroup].years[year] = 0;
                 }
                 totalsMap[country][drugGroup].years[year] += weight;
+
+                if (!totalsMap[country][drugGroup].drugTypes[drugType].years[year]) {
+                    totalsMap[country][drugGroup].drugTypes[drugType].years[year] = 0;
+                }
+
+                totalsMap[country][drugGroup].drugTypes[drugType].years[year] += weight;
 
                 if (msCode) {
                     totalsMap[country][drugGroup].msCodes.add(msCode);
@@ -278,13 +299,20 @@ const Dashboard = () => {
         const totalsArray = [];
         Object.keys(totalsMap).forEach((country) => {
             Object.keys(totalsMap[country]).forEach((drugGroup) => {
-                const { total, years, msCodes } = totalsMap[country][drugGroup];
+                const { total, years, msCodes, drugTypes } = totalsMap[country][drugGroup];
+                const drugTypeArray = Object.keys(drugTypes).map((drugType) => ({
+                    drugType,
+                    total: drugTypes[drugType].total,
+                    years: drugTypes[drugType].years,
+                }));
+
                 totalsArray.push({
                     country,
                     drugGroup,
                     total,
                     years,
                     msCodes: Array.from(msCodes),
+                    drugTypes: drugTypeArray,
                 });
             });
         });
@@ -299,7 +327,7 @@ const Dashboard = () => {
             result.NPS = PrevalenceNPSdata;
             result.NonNPS = PrevalenceNonNPSdata;
         } else if (filters.mode.includes('seizure')) {
-            result.seizure = Drugdata; 
+            result.seizure = Drugdata;
         } else if (filters.mode.includes('price')) {
             result.price = PriceData;
         }
@@ -314,15 +342,15 @@ const Dashboard = () => {
 
     // Debug
     useEffect(() => {
-       // console.log('Prevalence Data: ', filteredPrevalenceData);
-       // console.log('Filters updated:', filters);
-       // console.log('Selected Country in Dashboard:', filters.region?.country);
-       // console.log('Filteres DrugSeziure Data: ', drugSeziureFilteredData);
-       // console.log('Processed Seizure Data:', totalsByCountryDrugGroupAndYear);
-       console.log('Filter Map', filteredMapData)
-       console.log('totalsByCountryAndYearForMap', totalsByCountryAndYearForArray);
+        // console.log('Prevalence Data: ', filteredPrevalenceData);
+        // console.log('Filters updated:', filters);
+        // console.log('Selected Country in Dashboard:', filters.region?.country);
+        // console.log('Filteres DrugSeziure Data: ', drugSeziureFilteredData);
+        // console.log('Processed Seizure Data:', totalsByCountryDrugGroupAndYear);
+        console.log('Filter Map', filteredMapData)
+        console.log('totalsByCountryAndYearForMap', totalsByCountryAndYearForArray);
     }, [filters, totalsByCountryDrugGroupAndYear]);
-    
+
     // UI 렌더링
     return (
         <div className='container-fluid'>
@@ -337,8 +365,8 @@ const Dashboard = () => {
             <div className='row'>
                 {/* Sidebar */}
                 <div className='col-2 p-2'>
-                    <Sidebar 
-                        onFilterChange={handleFilterChange} 
+                    <Sidebar
+                        onFilterChange={handleFilterChange}
                         selectedRegion={filters.region.region}
                         selectedCountry={filters.region.country}
                     />
@@ -348,7 +376,7 @@ const Dashboard = () => {
                     <div className='row'>
                         {/* Map */}
                         <div className='col-6 p-2' style={{ height: '400px' }}>
-                            <WorldMap 
+                            <WorldMap
                                 data={totalsByCountryAndYearForArray}
                                 selectedRegion={filters.region.region}
                                 selectedCountry={filters.region.country}
@@ -363,7 +391,7 @@ const Dashboard = () => {
                     <div className='row'>
                         {/* Seizure */}
                         <div className='col-6 p-2' style={{ height: '400px' }}>
-                            <Seizure data={totalsByCountryDrugGroupAndYear} selectedCountry={filters.region.country} />
+                            <Seizure data={totalsByCountryDrugGroupAndYear} selectedCountry={filters.region.country} selectedDrugType={filters.drugs.drugGroup} />
                         </div>
                         {/* Price Charts */}
                         <div className='col-6 p-2' style={{ height: '400px' }}>
