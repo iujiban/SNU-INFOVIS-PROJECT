@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 const MultiLevelDropdown = ({ label, options, levels, onChange, value }) => {
     const [selections, setSelections] = useState({});
     const [filteredOptions, setFilteredOptions] = useState({});
-    
+
     // Update selections when value prop changes
     useEffect(() => {
         if (value) {
@@ -17,7 +17,7 @@ const MultiLevelDropdown = ({ label, options, levels, onChange, value }) => {
     // Initialize filtered options for each level
     useEffect(() => {
         const newFilteredOptions = {};
-        
+
         levels.forEach((level, index) => {
             if (index === 0) {
                 // First level shows unique values
@@ -34,15 +34,12 @@ const MultiLevelDropdown = ({ label, options, levels, onChange, value }) => {
                 // If we have a selection for this level but it's not in the filtered options,
                 // add it to ensure it's available for selection
                 if (selections[level] && !newFilteredOptions[level].includes(selections[level])) {
-                    console.log(`Adding missing selection ${selections[level]} to options for ${level}`);
                     newFilteredOptions[level].push(selections[level]);
                     newFilteredOptions[level].sort();
                 }
             }
         });
-        
-        console.log('Filtered options:', newFilteredOptions);
-        console.log('Current selections:', selections);
+
         setFilteredOptions(newFilteredOptions);
     }, [options, levels, selections]);
 
@@ -52,12 +49,12 @@ const MultiLevelDropdown = ({ label, options, levels, onChange, value }) => {
             ...selections,
             [level]: value || null
         };
-        
+
         // Clear subsequent selections
         levels.slice(levelIndex + 1).forEach(nextLevel => {
             newSelections[nextLevel] = null;
         });
-        
+
         setSelections(newSelections);
         onChange(newSelections);
     };

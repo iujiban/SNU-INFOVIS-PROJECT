@@ -67,7 +67,6 @@ const Dashboard = () => {
     };
 
     const handleMapCountrySelect = ({ region, country }) => {
-        console.log('Dashboard handleMapCountrySelect:', { region, country });
         // Reset both filters and notify Sidebar
         handleFilterChange({
             region: {
@@ -236,7 +235,6 @@ const Dashboard = () => {
             });
         });
 
-        console.log('Flattened Array:', resultArray); // Debugging output
         return resultArray;
     }, [drugSeziureFilteredData]);
 
@@ -336,19 +334,14 @@ const Dashboard = () => {
 
     }, [filters.mode]);
 
-    useEffect(() => {
-        console.log('Dashboard filters updated:', filters);
-    }, [filters]);
 
     // Debug
     useEffect(() => {
-        // console.log('Prevalence Data: ', filteredPrevalenceData);
-        // console.log('Filters updated:', filters);
-        // console.log('Selected Country in Dashboard:', filters.region?.country);
-        // console.log('Filteres DrugSeziure Data: ', drugSeziureFilteredData);
-        // console.log('Processed Seizure Data:', totalsByCountryDrugGroupAndYear);
+        /*
         console.log('Filter Map', filteredMapData)
         console.log('totalsByCountryAndYearForMap', totalsByCountryAndYearForArray);
+        console.log('totalsByCountryAndYearForArray', totalsByCountryAndYearForArray);
+        */
     }, [filters, totalsByCountryDrugGroupAndYear]);
 
     // UI 렌더링

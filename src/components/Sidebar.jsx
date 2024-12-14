@@ -2,7 +2,7 @@ import CheckboxStack from './ui/CheckboxStack';
 import RadioStack from './ui/RadioStack';
 import Range from './ui/Range';
 import MultiLevelDropdown from './ui/MultiLevelDropdown';
-import React, {useEffect, useState, useMemo} from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 
 // data
 import Seziure from '../data/Drug_seizures_2018_2022.json'
@@ -11,27 +11,27 @@ import NonNPSPrevalence from '../data/Prevalence_of_drug_use_NonNPS_General.json
 import Price from '../data/Prices_of_drugs.json'
 
 const modeOptions = [
-    { value: 'prevalence', label: 'Prevalence'},
-    { value: 'seizure', label: 'Seizure'},
-    { value: 'price', label: 'Price'},
+    { value: 'prevalence', label: 'Prevalence' },
+    { value: 'seizure', label: 'Seizure' },
+    { value: 'price', label: 'Price' },
 ];
 
 const genderOptions = [
-    { value: 'all', label: 'All'},
-    { value: 'male', label: 'Male'},
-    { value: 'female', label: 'Female'},
+    { value: 'all', label: 'All' },
+    { value: 'male', label: 'Male' },
+    { value: 'female', label: 'Female' },
 ];
 
 const ageOptions = [
-    {value: 'all', label: 'All'},
-    {value: 'youth', label: 'Youth'},
+    { value: 'all', label: 'All' },
+    { value: 'youth', label: 'Youth' },
 ];
 
 
 const yearMin = 2018;
 const yearMax = 2022;
 
-const Sidebar = ({onFilterChange, selectedRegion, selectedCountry}) => {
+const Sidebar = ({ onFilterChange, selectedRegion, selectedCountry }) => {
     const [yearStatic, setYearStatic] = useState({ minYear: 2018, maxYear: 2022 });
     const [selectedMode, setSelectedMode] = useState(null);
     const [yearRange, setYearRange] = useState({ minYear: yearMin, maxYear: yearMax });
@@ -46,24 +46,24 @@ const Sidebar = ({onFilterChange, selectedRegion, selectedCountry}) => {
 
     const handleModeChange = (selectedModes) => {
         setSelectedMode(selectedModes)
-        onFilterChange({mode: selectedModes});
+        onFilterChange({ mode: selectedModes });
 
     };
-/*
-    const filteredData = selectedMode && Array.isArray(selectedMode)
-    ? selectedMode.flatMap(mode => dataMap[mode] || []) // Combine data for all selected modes
-    : selectedMode
-    ? dataMap[selectedMode.value]
-    : null;
-*/
-const filteredData = useMemo(() => {
-    if (!selectedMode || !Array.isArray(selectedMode)) return null;
+    /*
+        const filteredData = selectedMode && Array.isArray(selectedMode)
+        ? selectedMode.flatMap(mode => dataMap[mode] || []) // Combine data for all selected modes
+        : selectedMode
+        ? dataMap[selectedMode.value]
+        : null;
+    */
+    const filteredData = useMemo(() => {
+        if (!selectedMode || !Array.isArray(selectedMode)) return null;
 
-    // Flatten the array of data for selected modes
-    return selectedMode.flatMap((mode) => dataMap[mode] || []);
-}, [selectedMode]);
+        // Flatten the array of data for selected modes
+        return selectedMode.flatMap((mode) => dataMap[mode] || []);
+    }, [selectedMode]);
 
-const regionOptions = useMemo(() => {
+    const regionOptions = useMemo(() => {
         // Create a base set of region options that always exist
         const baseRegions = [
             { Region: 'Europe', Country: 'Russia' },
@@ -83,7 +83,6 @@ const regionOptions = useMemo(() => {
         ];
 
         if (!filteredData || filteredData.length === 0) {
-            console.log('Using base region options');
             return baseRegions;
         }
 
@@ -105,7 +104,6 @@ const regionOptions = useMemo(() => {
         });
 
         const result = Array.from(uniqueRegions.values());
-        console.log('Dynamic Region Options:', result);
         return result;
     }, [filteredData]);
 
@@ -135,9 +133,9 @@ const regionOptions = useMemo(() => {
         if (!filteredData || filteredData.length === 0) {
             return [];
         }
-    
+
         const uniqueDrugs = new Map();
-    
+
         // Extract unique Drug group and Drug combinations
         filteredData.forEach((item) => {
             const { 'Drug group': drugGroup, Drug } = item || {}; // Extract relevant fields
@@ -148,12 +146,12 @@ const regionOptions = useMemo(() => {
                 );
             }
         });
-    
+
         // Convert Map values to an array
         const result = Array.from(uniqueDrugs.values());
         return result;
     }, [filteredData]);
-    
+
 
     const handleGenderChange = (selectedGender) => {
         onFilterChange({ gender: selectedGender });
@@ -164,13 +162,12 @@ const regionOptions = useMemo(() => {
     };
 
     const handleDrugChange = (selectedDrugs) => {
-        const { type: drugGroup, name: drug } = selectedDrugs || {}; 
+        const { type: drugGroup, name: drug } = selectedDrugs || {};
         onFilterChange({ drugs: { drugGroup, drug } });
     };
 
     const handleRegionChange = (selectedRegion) => {
-        const { Region: region, SubRegion: subRegion, Country: country } = selectedRegion || {}; 
-        console.log('Sidebar handleRegionChange:', { selectedRegion, region, subRegion, country });
+        const { Region: region, SubRegion: subRegion, Country: country } = selectedRegion || {};
         onFilterChange({
             region: {
                 region: region || null,
@@ -194,40 +191,40 @@ const regionOptions = useMemo(() => {
 
     return (
         <div className="sidebar">
-            <MultiLevelDropdown 
-                label="Region" 
+            <MultiLevelDropdown
+                label="Region"
                 options={regionOptions}
-                levels={['Region', 'Country']} 
+                levels={['Region', 'Country']}
                 onChange={handleRegionChange}
                 value={selectedRegion || selectedCountry ? {
                     Region: selectedRegion,
                     Country: selectedCountry
                 } : null}
             />
-            <Range 
-                min={yearStatic.minYear} 
+            <Range
+                min={yearStatic.minYear}
                 max={yearStatic.maxYear}
-                step={1} 
-                name="Year" 
+                step={1}
+                name="Year"
                 onChange={handleYearChange}
             />
-            <RadioStack 
+            <RadioStack
                 label="Gender"
-                options={genderOptions} 
+                options={genderOptions}
                 name='genderRadio'
                 onChange={handleGenderChange}
             />
-            <RadioStack 
-                label="Age" 
-                options={ageOptions} 
+            <RadioStack
+                label="Age"
+                options={ageOptions}
                 name='ageRadio'
                 onChange={handleAgeChange}
             />
-            <MultiLevelDropdown 
-                label="Drug" 
+            <MultiLevelDropdown
+                label="Drug"
                 options={DrugOptions}
                 levels={['type']}
-                onChange={handleDrugChange} 
+                onChange={handleDrugChange}
             />
         </div>
     )
