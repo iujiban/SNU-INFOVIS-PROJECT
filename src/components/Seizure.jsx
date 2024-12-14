@@ -1,13 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import { useDimensions } from '../hooks/useDimensions';
+import ExpandButton from './ui/ExpandButton';
+import Modal from './ui/Modal';
 
 const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
     const containerRef = useRef();
     const svgRef = useRef();
-    const svgContainerRef = useRef(); // New ref for the SVG container
+    const svgContainerRef = useRef();
+    const modalSvgRef = useRef();
     const dimensions = useDimensions(containerRef);
 
+    const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedBarData, setSelectedBarData] = useState(null);
     const [selectedBar, setSelectedBar] = useState(null); // Track the selected DOM element
 
@@ -169,10 +173,10 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
     };
 
     // Create Stacked Bar Chart
-    const createStackedBarChart = (processedData, colorMap) => {
+    const createStackedBarChart = (processedData, colorMap, targetRef) => {
         const svgContainer = d3.select(svgContainerRef.current);
         const containerDimensions = svgContainer.node().getBoundingClientRect();
-        const margin = { top: 20, right: 30, bottom: 40, left: 50 };
+        const margin = { top: 20, right: 30, bottom: 60, left: 50 };  // Increased bottom margin
         
         // Calculate the actual chart dimensions
         const width = containerDimensions.width;
@@ -181,7 +185,7 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
         const chartHeight = height - margin.top - margin.bottom;
 
         // Set up the SVG with viewBox for responsiveness
-        const svg = d3.select(svgRef.current)
+        const svg = d3.select(targetRef.current)
             .attr('width', width)
             .attr('height', height)
             .attr('viewBox', `0 0 ${width} ${height}`)
@@ -274,21 +278,26 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
             .attr("transform", `translate(0,${chartHeight})`)
             .call(d3.axisBottom(x))
             .selectAll("text")
-            .attr("transform", "rotate(90)")
-            .style("text-anchor", "start")
-            .attr("dx", "0.8em")
-            .attr("dy", "-0.6em");
+            .attr("transform", "rotate(-90)")
+            .style("text-anchor", "middle")
+            .style("font-size", "4px")
+            .attr("dx", "-3em")
+            .attr("dy", "-2em");
 
         // Add the y-axis
-        chartGroup
+        const yAxis = chartGroup
             .append("g")
             .call(d3.axisLeft(y).ticks(null, "s"))
-            .append("text")
-            .attr("fill", "#000")
+            .selectAll("text")
+            .style("font-size", "3px");
+
+        // Add y-axis title
+        chartGroup.append("text")
             .attr("transform", "rotate(-90)")
-            .attr("y", 6)
-            .attr("dy", "0.71em")
-            .attr("text-anchor", "end")
+            .attr("y", -margin.left + 25)
+            .attr("x", -chartHeight / 2)
+            .attr("text-anchor", "middle")
+            .attr("font-size", "8px")
             .text("Percentage");
     };
 
@@ -353,7 +362,7 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
     };
 
     // Create Pie Chart 
-    const createPieChart = (processedData, colorMap) => {
+    const createPieChart = (processedData, colorMap, targetRef) => {
         const svgContainer = d3.select(svgContainerRef.current);
         const containerDimensions = svgContainer.node().getBoundingClientRect();
         const margin = { top: 20, right: 30, bottom: 40, left: 50 };
@@ -366,7 +375,7 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
         const radius = Math.min(chartWidth, chartHeight) / 2;
 
         // Clear the previous chart
-        const svg = d3.select(svgRef.current)
+        const svg = d3.select(targetRef.current)
             .attr('width', width)
             .attr('height', height)
             .attr('viewBox', `0 0 ${width} ${height}`)
@@ -436,7 +445,7 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
         const findDrugType = (processedData, selectedData) => {
             if (!selectedData) {
                 console.warn("No selected data provided.");
-                return null; // Return null if selectedData is not set
+                return null;
             }
 
             const { msCode, drugValue } = selectedData;
@@ -450,24 +459,31 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
 
             for (const [drugType, value] of Object.entries(matchingData)) {
                 if (drugType !== "msCode" && drugType !== "country" && value === drugValue) {
-                    return drugType; // Return the matching drugType
+                    return drugType;
                 }
             }
 
             console.warn(`No matching drugType found for value: ${drugValue} in msCode: ${msCode}`);
             return null;
         };
+
         if (selectedCountry) {
             const processedData = selectedDrugType
                 ? processDataFromPreprocessedLookup(drugTypeLookup, selectedDrugType)
                 : processDataForStackedBar(data);
 
             const colorMap = customColors(null);
-            createPieChart(processedData, colorMap);
+            createPieChart(processedData, colorMap, svgRef);
+            if (isModalOpen) {
+                createPieChart(processedData, colorMap, modalSvgRef);
+            }
         } else {
             const processedData = processDataForStackedBar(data);
             const colorMap = customColors(null);
-            createStackedBarChart(processedData, colorMap);
+            createStackedBarChart(processedData, colorMap, svgRef);
+            if (isModalOpen) {
+                createStackedBarChart(processedData, colorMap, modalSvgRef);
+            }
         }
 
         if (selectedBarData) {
@@ -477,11 +493,11 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
         } else {
             console.log("No bar data selected yet.");
         }
-    }, [data, selectedCountry, selectedDrugType, dimensions]);
+    }, [data, selectedCountry, selectedDrugType, dimensions, isModalOpen]);
 
     return (
         <div ref={containerRef} className="card h-100">
-            <div className="card-header">
+            <div className="card-header d-flex justify-content-between align-items-center">
                 <h5 className="card-title mb-0">
                     {selectedCountry
                         ? `Drug Distribution in ${selectedCountry}`
@@ -489,6 +505,7 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
                             ? `Drug Types in ${selectedDrugType}`
                             : 'Drug Distribution'}
                 </h5>
+                <ExpandButton onClick={() => setIsModalOpen(true)} />
             </div>
             <div className="card-body p-0 d-flex flex-column" style={{ height: '100%', overflow: 'hidden' }}>
                 <div ref={svgContainerRef} style={{ flex: '1 1 auto', minHeight: 0, height: '70%', position: 'relative' }}>
@@ -500,24 +517,41 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
                     borderTop: '1px solid #dee2e6',
                     height: '30%'
                 }}>
-                    {!selectedCountry && !selectedDrugType && (
-                        <ul style={{
-                            display: 'flex',
-                            flexWrap: 'wrap',
-                            justifyContent: 'flex-start',
-                            alignItems: 'center',
-                            listStyleType: 'none',
-                            padding: 0,
-                            margin: 0,
-                            gap: '8px',
-                            height: '100%',
-                            overflow: 'auto'
-                        }}>
-                            {renderLegend(selectedDrugType, selectedCountry)}
-                        </ul>
-                    )}
+                    {renderLegend(selectedDrugType, selectedCountry)}
                 </div>
             </div>
+            <Modal
+                isOpen={isModalOpen}
+                onClose={() => setIsModalOpen(false)}
+                title={selectedCountry
+                    ? `Drug Distribution in ${selectedCountry}`
+                    : selectedDrugType
+                        ? `Drug Types in ${selectedDrugType}`
+                        : 'Drug Distribution'}
+            >
+                <div className="card h-100">
+                    <div className="card-body p-0 d-flex flex-column" style={{ height: '80vh', overflow: 'hidden' }}>
+                        <div style={{ flex: '1 1 auto', minHeight: 0, height: '85%', overflowX: 'auto' }}>
+                            <svg 
+                                ref={modalSvgRef} 
+                                style={{ 
+                                    display: 'block', 
+                                    width: '100%',
+                                    height: '100%'
+                                }}
+                            ></svg>
+                        </div>
+                        <div style={{ 
+                            padding: '8px',
+                            backgroundColor: '#f8f9fa',
+                            borderTop: '1px solid #dee2e6',
+                            height: '15%'
+                        }}>
+                            {renderLegend(selectedDrugType, selectedCountry)}
+                        </div>
+                    </div>
+                </div>
+            </Modal>
         </div>
     );
 };
