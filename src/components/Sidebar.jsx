@@ -192,11 +192,6 @@ const regionOptions = useMemo(() => {
         console.log('Region options:', regionOptions);
     }, [selectedRegion, selectedCountry, regionOptions]);
 
-    useEffect(() => {
-        if (yearOptions.minYear !== yearStatic.minYear || yearOptions.maxYear !== yearStatic.maxYear) {
-            setYearStatic({ minYear: yearOptions.minYear, maxYear: yearOptions.maxYear });
-        }
-        }, [yearOptions,  yearRange]);
     return (
         <div className="sidebar">
             <MultiLevelDropdown 
