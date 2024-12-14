@@ -5,6 +5,7 @@ import { useDimensions } from '../hooks/useDimensions';
 const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
     const containerRef = useRef();
     const svgRef = useRef();
+    const svgContainerRef = useRef(); // New ref for the SVG container
     const dimensions = useDimensions(containerRef);
 
     const [selectedBarData, setSelectedBarData] = useState(null);
@@ -169,8 +170,28 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
 
     // Create Stacked Bar Chart
     const createStackedBarChart = (processedData, colorMap) => {
-        const { width, height } = dimensions;
-        const margin = { top: 20, right: 30, bottom: 120, left: 50 };
+        const svgContainer = d3.select(svgContainerRef.current);
+        const containerDimensions = svgContainer.node().getBoundingClientRect();
+        const margin = { top: 20, right: 30, bottom: 40, left: 50 };
+        
+        // Calculate the actual chart dimensions
+        const width = containerDimensions.width;
+        const height = containerDimensions.height;
+        const chartWidth = width - margin.left - margin.right;
+        const chartHeight = height - margin.top - margin.bottom;
+
+        // Set up the SVG with viewBox for responsiveness
+        const svg = d3.select(svgRef.current)
+            .attr('width', width)
+            .attr('height', height)
+            .attr('viewBox', `0 0 ${width} ${height}`)
+            .attr('preserveAspectRatio', 'xMidYMid meet');
+
+        svg.selectAll("*").remove(); // Clear previous content
+
+        // Create a group for the chart content with margin translation
+        const chartGroup = svg.append('g')
+            .attr('transform', `translate(${margin.left},${margin.top})`);
 
         // Extract the drug group keys
         const drugGroups = Array.from(
@@ -195,30 +216,20 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
         const x = d3
             .scaleBand()
             .domain(processedData.map((d) => d.msCode))
-            .range([margin.left, width - margin.right])
+            .range([0, chartWidth])
             .padding(0.1);
 
         const y = d3
             .scaleLinear()
-            .domain([0, d3.max(series, (s) => d3.max(s, (d) => d[1]))])
-            .range([height - margin.bottom, margin.top]);
+            .domain([0, 100])
+            .range([chartHeight, 0]);
 
         const color = (drugGroup) => colorMap[drugGroup] || "#ccc";
 
-        // Clear previous chart
-        d3.select(svgRef.current).selectAll("*").remove();
-
-        const svg = d3
-            .select(svgRef.current)
-            .attr("width", width)
-            .attr("height", height)
-            .attr("viewBox", `0 0 ${width} ${height}`)
-            .attr("preserveAspectRatio", "xMidYMid meet");
-
         let selectedBar = null; // Track the selected bar
 
-        svg
-            .append("g")
+        // Add the bars
+        chartGroup
             .selectAll("g")
             .data(series)
             .join("g")
@@ -231,70 +242,54 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
             .attr("height", (d) => y(d[0]) - y(d[1]))
             .attr("width", x.bandwidth())
             .on("mouseover", function (event, d) {
-                d3.select(this)
-                    .style("stroke", "black")
-                    .style("stroke-width", 2);
+                const drugGroup = d3.select(this.parentNode).datum().key;
+                const percentage = (d[1] - d[0]).toFixed(1);
+                setSelectedBarData({
+                    drugGroup,
+                    percentage,
+                    msCode: d.data.msCode,
+                });
 
-                svg.selectAll(".x-axis-label")
-                    .filter((label) => label === d.data.msCode)
-                    .style("font-weight", "bold")
-                    .style("fill", "red");
-            })
-            .on("mouseout", function (event, d) {
-                if (selectedBar !== this) {
-                    d3.select(this)
-                        .style("stroke", "none")
-                        .style("stroke-width", 0);
-
-                    svg.selectAll(".x-axis-label")
-                        .filter((label) => label === d.data.msCode)
-                        .style("font-weight", "normal")
-                        .style("fill", "black");
-                }
-            })
-            .on("click", function (event, d) {
-                const drugValue = d[1] - d[0]
-                const msCode = d.data.msCode;
-
-                // Construct the selectedData object
-                const selectedData = {
-                    msCode,
-                    drugValue,
-                };
-
-                console.log("Selected Data:", selectedData);
-
-                // Check if the bar is already selected
+                // Highlight the bar
                 if (selectedBar) {
-                    d3.select(selectedBar)
-                        .style("stroke", "none")
-                        .style("stroke-width", 0);
+                    d3.select(selectedBar).attr("stroke-width", 0);
                 }
-
-                // Highlight the clicked bar
-                setSelectedBar(this);
                 d3.select(this)
-                    .style("stroke", "blue")
-                    .style("stroke-width", 3);
-
-                // Update the selected bar data
-                setSelectedBarData(selectedData);
-                console.log("setsELECTEDBar", setSelectedBar)
+                    .attr("stroke", "black")
+                    .attr("stroke-width", 2);
+                selectedBar = this;
             })
-            .append("title")
-            .text((d) => `${d.data.msCode}: ${d[1] - d[0]}%`);
-        // Add X-axis
-        svg.append("g")
-            .attr("transform", `translate(0,${height - margin.bottom})`)
+            .on("mouseout", function () {
+                setSelectedBarData(null);
+                // Remove highlight
+                if (selectedBar) {
+                    d3.select(selectedBar).attr("stroke-width", 0);
+                    selectedBar = null;
+                }
+            });
+
+        // Add the x-axis
+        chartGroup
+            .append("g")
+            .attr("transform", `translate(0,${chartHeight})`)
             .call(d3.axisBottom(x))
             .selectAll("text")
-            .attr("transform", "rotate(-45)")
-            .style("text-anchor", "end")
-            .style("font-size", "10px")
-            .classed("x-axis-label", true);
+            .attr("transform", "rotate(90)")
+            .style("text-anchor", "start")
+            .attr("dx", "0.8em")
+            .attr("dy", "-0.6em");
 
-        // Add Y-axis
-        svg.append("g").attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(y));
+        // Add the y-axis
+        chartGroup
+            .append("g")
+            .call(d3.axisLeft(y).ticks(null, "s"))
+            .append("text")
+            .attr("fill", "#000")
+            .attr("transform", "rotate(-90)")
+            .attr("y", 6)
+            .attr("dy", "0.71em")
+            .attr("text-anchor", "end")
+            .text("Percentage");
     };
 
     const renderLegend = (selectedDrugType, selectedCountry) => {
@@ -321,32 +316,33 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
 
         // Render the legend UI
         return (
-            <ul
-                style={{
-                    display: "flex",
-                    flexWrap: "wrap",
-                    justifyContent: "center",
-                    listStyleType: "none",
-                    padding: 0,
-                    margin: 0,
-                }}
-            >
+            <ul style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'flex-start',
+                alignItems: 'center',
+                listStyleType: 'none',
+                padding: 0,
+                margin: 0,
+                gap: '8px',
+                height: '100%',
+                overflow: 'auto'
+            }}>
                 {Object.entries(legendColors).map(([label, color]) => (
                     <li
                         key={label}
                         style={{
-                            display: "flex",
-                            alignItems: "center",
-                            margin: "0px 5px",
+                            display: 'flex',
+                            alignItems: 'center',
                         }}
                     >
                         <span
                             style={{
-                                display: "inline-block",
-                                width: "15px",
-                                height: "15px",
+                                display: 'inline-block',
+                                width: '15px',
+                                height: '15px',
                                 backgroundColor: color,
-                                marginRight: "5px",
+                                marginRight: '5px',
                             }}
                         ></span>
                         {label}
@@ -358,91 +354,78 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
 
     // Create Pie Chart 
     const createPieChart = (processedData, colorMap) => {
-        const { width, height } = dimensions;
-        const radius = Math.min(width, height) / 2 - 20;
+        const svgContainer = d3.select(svgContainerRef.current);
+        const containerDimensions = svgContainer.node().getBoundingClientRect();
+        const margin = { top: 20, right: 30, bottom: 40, left: 50 };
+        
+        // Calculate dimensions
+        const width = containerDimensions.width;
+        const height = containerDimensions.height;
+        const chartWidth = width - margin.left - margin.right;
+        const chartHeight = height - margin.top - margin.bottom;
+        const radius = Math.min(chartWidth, chartHeight) / 2;
 
         // Clear the previous chart
-        d3.select(svgRef.current).selectAll('*').remove();
-
-        // Check if there's no valid data
-        if (!processedData || processedData.length === 0 || !colorMap) {
-            const svg = d3
-                .select(svgRef.current)
-                .attr('width', width)
-                .attr('height', height)
-                .attr('viewBox', `0 0 ${width} ${height}`)
-                .attr('preserveAspectRatio', 'xMidYMid meet');
-
-            // Add "No Data Available" text to the center
-            svg.append('text')
-                .attr('x', width / 2)
-                .attr('y', height / 2)
-                .attr('text-anchor', 'middle')
-                .attr('font-size', '16px')
-                .attr('fill', '#666')
-                .text('No Data Available');
-            return; // Exit the function
-        }
-
-        // Create an SVG container
-        const svg = d3
-            .select(svgRef.current)
+        const svg = d3.select(svgRef.current)
             .attr('width', width)
-            .attr('height', height + 60)
-            .attr('viewBox', `0 0 ${width} ${height + 60}`)
+            .attr('height', height)
+            .attr('viewBox', `0 0 ${width} ${height}`)
             .attr('preserveAspectRatio', 'xMidYMid meet');
 
-        // Prepare pie data
-        const pie = d3.pie().value((d) => d[1]);
-        const arc = d3.arc().innerRadius(0).outerRadius(radius);
+        svg.selectAll("*").remove();
 
-        const drugGroups = Object.entries(processedData[0])
-            .filter(([key]) => key !== 'country' && key !== 'msCode') // Exclude non-drug keys
-            .sort((a, b) => b[1] - a[1]); // Sort by percentage in descending order
+        // Create a group for the pie chart, centered in the available space
+        const chartGroup = svg.append('g')
+            .attr('transform', `translate(${width/2},${height/2})`);
 
-        const color = d3.scaleOrdinal()
-            .domain(drugGroups.map(([key]) => key))
-            .range(Object.values(colorMap));
+        // Process data for pie chart
+        const pieData = processedData.reduce((acc, item) => {
+            Object.entries(item).forEach(([key, value]) => {
+                if (key !== "msCode" && key !== "country") {
+                    if (!acc[key]) acc[key] = 0;
+                    acc[key] += value;
+                }
+            });
+            return acc;
+        }, {});
 
-        const pieData = pie(drugGroups);
+        const pie = d3.pie()
+            .value(d => d[1])
+            .sort(null);
 
-        // Draw the pie chart
-        const g = svg.append('g').attr('transform', `translate(${width / 2}, ${height / 2})`);
+        const arc = d3.arc()
+            .innerRadius(0)
+            .outerRadius(radius);
 
-        g.selectAll('path')
-            .data(pieData)
+        // Add the pie slices
+        const slices = chartGroup
+            .selectAll('path')
+            .data(pie(Object.entries(pieData)))
             .join('path')
             .attr('d', arc)
-            .attr('fill', (d) => color(d.data[0]))
-            .attr('stroke', '#fff')
-            .attr('stroke-width', 1)
-            .append('title')
-            .text((d) => `${d.data[0]}: ${parseFloat(d.data[1]).toFixed(2)}%`);
+            .attr('fill', d => colorMap[d.data[0]] || "#ccc")
+            .attr('stroke', 'white')
+            .style('stroke-width', '2px');
 
-        // Add dynamic color legend at the top-left corner
-        const legend = svg.append('g').attr('transform', `translate(10, 10)`); // Position legend at top-left
-
-        let totalPercentage = drugGroups.reduce((sum, [_, value]) => sum + value, 0);
-
-        drugGroups.forEach(([key, value], i) => {
-            const legendItem = legend.append('g').attr('transform', `translate(0, ${i * 25})`);
-
-            legendItem
-                .append('rect')
-                .attr('width', 15)
-                .attr('height', 15)
-                .attr('fill', color(key))
-                .attr('x', 0)
-                .attr('y', 0);
-
-            legendItem
-                .append('text')
-                .attr('x', 20)
-                .attr('y', 12)
-                .attr('font-size', '12px')
-                .attr('fill', '#000')
-                .text(`${key}: ${((value / totalPercentage) * 100).toFixed(2)}%`);
-        });
+        // Add hover interactions
+        slices
+            .on('mouseover', function(event, d) {
+                const percentage = (d.data[1]).toFixed(1);
+                setSelectedBarData({
+                    drugGroup: d.data[0],
+                    percentage,
+                });
+                
+                d3.select(this)
+                    .attr('stroke', 'black')
+                    .style('stroke-width', '3px');
+            })
+            .on('mouseout', function() {
+                setSelectedBarData(null);
+                d3.select(this)
+                    .attr('stroke', 'white')
+                    .style('stroke-width', '2px');
+            });
     };
 
 
@@ -507,15 +490,32 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
                             : 'Drug Distribution'}
                 </h5>
             </div>
-            <div className="card-body d-flex flex-column">
-                <svg ref={svgRef} style={{ flexGrow: 1, width: '100%', height: '100%' }}></svg>
-                <div className="color-legend" style={{ marginTop: '10px' }}>
-                    <h6 style={{ marginBottom: '5px' }}>
-                        {selectedCountry || selectedDrugType
-                            ? ''
-                            : 'Color Legend:'}
-                    </h6>
-                    {!selectedCountry && !selectedDrugType && renderLegend(selectedDrugType, selectedCountry)}
+            <div className="card-body p-0 d-flex flex-column" style={{ height: '100%', overflow: 'hidden' }}>
+                <div ref={svgContainerRef} style={{ flex: '1 1 auto', minHeight: 0, height: '70%', position: 'relative' }}>
+                    <svg ref={svgRef}></svg>
+                </div>
+                <div style={{
+                    padding: '8px',
+                    backgroundColor: '#f8f9fa',
+                    borderTop: '1px solid #dee2e6',
+                    height: '30%'
+                }}>
+                    {!selectedCountry && !selectedDrugType && (
+                        <ul style={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            justifyContent: 'flex-start',
+                            alignItems: 'center',
+                            listStyleType: 'none',
+                            padding: 0,
+                            margin: 0,
+                            gap: '8px',
+                            height: '100%',
+                            overflow: 'auto'
+                        }}>
+                            {renderLegend(selectedDrugType, selectedCountry)}
+                        </ul>
+                    )}
                 </div>
             </div>
         </div>
