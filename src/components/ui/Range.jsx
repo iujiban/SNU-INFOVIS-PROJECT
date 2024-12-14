@@ -15,9 +15,9 @@ const Range = ({ name, min, max, step, onChange }) => {
     return (
         <div className="card m-2 my-2">
             <div className="card-body">
-                <h6 className="form-label d-flex justify-content-between align-items-center" htmlFor={id}>
+                <h6 className="form-label d-flex flex-wrap gap-2" htmlFor={id}>
                     <span>{name}:</span>
-                    <span className="fw-normal">{values[0]} - {values[1]}</span>
+                    <span className="fw-normal ms-auto">{values[0]} - {values[1]}</span>
                 </h6>
                 <RangeSlider
                     step={step}
