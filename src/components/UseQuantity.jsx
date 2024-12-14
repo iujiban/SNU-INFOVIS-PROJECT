@@ -118,7 +118,7 @@ const UseQuantity = ({ data, selectedCountry }) => {
     return (
         <div className="card h-100">
             <div className="card-header d-flex justify-content-between align-items-center">
-                <h5 className="card-title mb-0">{selectedCountry ? `Drug Price in ${selectedCountry}` : 'Drug Price'}</h5>
+                <h5 className="card-title mb-0">{selectedCountry ? `Drug Use Quantity in ${selectedCountry}` : 'Drug Use Quantity'}</h5>
                 <ExpandButton onClick={() => setIsModalOpen(true)} />
             </div>
             <div className="card-body p-0">
@@ -136,7 +136,7 @@ const UseQuantity = ({ data, selectedCountry }) => {
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                title={selectedCountry ? `Drug Price in ${selectedCountry}` : 'Drug Price'}
+                title={selectedCountry ? `Drug Use Quantity in ${selectedCountry}` : 'Drug Use Quantity'}
             >
                 <div style={{ width: '100%', height: '80vh' }}>
                     <svg 

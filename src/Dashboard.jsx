@@ -13,6 +13,7 @@ import WorldMap from './components/WorldMap';
 import Prevalence from './components/Prevalence';
 import Seizure from './components/Seizure';
 import Price from './components/Price';
+import UseQuantity from './components/UseQuantity';
 
 // Bootstrap
 import 'bootstrap/dist/css/bootstrap.min.css';
@@ -346,7 +347,7 @@ const Dashboard = () => {
                         {/* Price Charts */}
                         <div className='col-6 p-2' style={{ height: '400px' }}>
                             <div className='col-12 h-50'>
-                                <Price data={filteredPrevalenceData} />
+                                <UseQuantity data={filteredPrevalenceData} />
                             </div>
                             <div className='col-12 h-50'>
                                 <Price data={filteredPrevalenceData} />
