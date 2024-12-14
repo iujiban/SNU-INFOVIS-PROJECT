@@ -15,6 +15,16 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [worldGeoData, setWorldGeoData] = useState(null);
 
+    const handleOceanClick = () => {
+        if (onCountrySelect) {
+            // Reset both map selection and dropdown
+            onCountrySelect({
+                region: null,
+                country: null
+            });
+        }
+    };
+
     useEffect(() => {
         console.log('WorldMap props:', {
             selectedRegion,
@@ -201,6 +211,13 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
                 .attr('preserveAspectRatio', 'xMidYMid meet');
 
             svg.selectAll("*").remove(); // Clear any previous content
+
+            // Add ocean background that will handle ocean clicks
+            svg.append('rect')
+                .attr('width', width)
+                .attr('height', height)
+                .attr('fill', '#ffffff')  // White color for ocean
+                .on('click', handleOceanClick);
 
             // Create a group for all map elements
             const mapGroup = svg.append('g');

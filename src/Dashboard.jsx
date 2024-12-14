@@ -68,17 +68,13 @@ const Dashboard = () => {
 
     const handleMapCountrySelect = ({ region, country }) => {
         console.log('Dashboard handleMapCountrySelect:', { region, country });
-        setFilters(prevFilters => {
-            const newFilters = {
-                ...prevFilters,
-                region: {
-                    region: region,
-                    subRegion: null,  // Reset subRegion when selecting from map
-                    country: country
-                }
-            };
-            console.log('New filters:', newFilters);
-            return newFilters;
+        // Reset both filters and notify Sidebar
+        handleFilterChange({
+            region: {
+                region: region,
+                subRegion: null,
+                country: country
+            }
         });
     };
 

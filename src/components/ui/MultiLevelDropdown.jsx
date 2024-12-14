@@ -8,6 +8,9 @@ const MultiLevelDropdown = ({ label, options, levels, onChange, value }) => {
     useEffect(() => {
         if (value) {
             setSelections(value);
+        } else {
+            // Reset selections when value is null
+            setSelections({});
         }
     }, [value]);
 
