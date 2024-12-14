@@ -162,7 +162,7 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
         const svgContainer = d3.select(svgContainerRef.current);
         const containerDimensions = svgContainer.node().getBoundingClientRect();
         const margin = { top: 20, right: 30, bottom: 60, left: 50 };  // Increased bottom margin
-        
+
         // Calculate the actual chart dimensions
         const width = containerDimensions.width;
         const height = containerDimensions.height;
@@ -341,81 +341,93 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
     };
 
     // Create Pie Chart 
-    const createPieChart = (processedData, colorMap, targetRef) => {
-        const svgContainer = d3.select(svgContainerRef.current);
-        const containerDimensions = svgContainer.node().getBoundingClientRect();
-        const margin = { top: 20, right: 30, bottom: 40, left: 50 };
-        
-        // Calculate dimensions
-        const width = containerDimensions.width;
-        const height = containerDimensions.height;
-        const chartWidth = width - margin.left - margin.right;
-        const chartHeight = height - margin.top - margin.bottom;
-        const radius = Math.min(chartWidth, chartHeight) / 2;
+    const createPieChart = (processedData, colorMap) => {
+        const { width, height } = dimensions;
+        const radius = Math.min(width, height) / 2 - 20;
 
         // Clear the previous chart
-        const svg = d3.select(targetRef.current)
+        d3.select(svgRef.current).selectAll('*').remove();
+
+        // Check if there's no valid data
+        if (!processedData || processedData.length === 0 || !colorMap) {
+            const svg = d3
+                .select(svgRef.current)
+                .attr('width', width)
+                .attr('height', height)
+                .attr('viewBox', `0 0 ${width} ${height}`)
+                .attr('preserveAspectRatio', 'xMidYMid meet');
+
+            // Add "No Data Available" text to the center
+            svg.append('text')
+                .attr('x', width / 2)
+                .attr('y', height / 2)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '16px')
+                .attr('fill', '#666')
+                .text('No Data Available');
+            return; // Exit the function
+        }
+
+        // Create an SVG container
+        const svg = d3
+            .select(svgRef.current)
             .attr('width', width)
-            .attr('height', height)
-            .attr('viewBox', `0 0 ${width} ${height}`)
+            .attr('height', height + 60)
+            .attr('viewBox', `0 0 ${width} ${height + 60}`)
             .attr('preserveAspectRatio', 'xMidYMid meet');
 
-        svg.selectAll("*").remove();
+        // Prepare pie data
+        const pie = d3.pie().value((d) => d[1]);
+        const arc = d3.arc().innerRadius(0).outerRadius(radius);
 
-        // Create a group for the pie chart, centered in the available space
-        const chartGroup = svg.append('g')
-            .attr('transform', `translate(${width/2},${height/2})`);
+        const drugGroups = Object.entries(processedData[0])
+            .filter(([key]) => key !== 'country' && key !== 'msCode') // Exclude non-drug keys
+            .sort((a, b) => b[1] - a[1]); // Sort by percentage in descending order
 
-        // Process data for pie chart
-        const pieData = processedData.reduce((acc, item) => {
-            Object.entries(item).forEach(([key, value]) => {
-                if (key !== "msCode" && key !== "country") {
-                    if (!acc[key]) acc[key] = 0;
-                    acc[key] += value;
-                }
-            });
-            return acc;
-        }, {});
+        const color = d3.scaleOrdinal()
+            .domain(drugGroups.map(([key]) => key))
+            .range(Object.values(colorMap));
 
-        const pie = d3.pie()
-            .value(d => d[1])
-            .sort(null);
+        const pieData = pie(drugGroups);
 
-        const arc = d3.arc()
-            .innerRadius(0)
-            .outerRadius(radius);
+        // Draw the pie chart
+        const g = svg.append('g').attr('transform', `translate(${width / 2}, ${height / 2})`);
 
-        // Add the pie slices
-        const slices = chartGroup
-            .selectAll('path')
-            .data(pie(Object.entries(pieData)))
+        g.selectAll('path')
+            .data(pieData)
             .join('path')
             .attr('d', arc)
-            .attr('fill', d => colorMap[d.data[0]] || "#ccc")
-            .attr('stroke', '#FFFFFF')
-            .style('stroke-width', '0.5px');
+            .attr('fill', (d) => color(d.data[0]))
+            .attr('stroke', '#fff')
+            .attr('stroke-width', 1)
+            .append('title')
+            .text((d) => `${d.data[0]}: ${parseFloat(d.data[1]).toFixed(2)}%`);
 
-        // Add hover interactions
-        slices
-            .on('mouseover', function(event, d) {
-                const percentage = (d.data[1]).toFixed(1);
-                setSelectedBarData({
-                    drugGroup: d.data[0],
-                    percentage,
-                });
-                
-                d3.select(this)
-                    .attr('stroke', 'black')
-                    .style('stroke-width', '2px');
-            })
-            .on('mouseout', function() {
-                setSelectedBarData(null);
-                d3.select(this)
-                    .attr('stroke', '#FFFFFF')
-                    .style('stroke-width', '0.5px');
-            });
+        // Add dynamic color legend at the top-left corner
+        const legend = svg.append('g').attr('transform', `translate(10, 10)`); // Position legend at top-left
+
+        let totalPercentage = drugGroups.reduce((sum, [_, value]) => sum + value, 0);
+
+        drugGroups.forEach(([key, value], i) => {
+            const legendItem = legend.append('g').attr('transform', `translate(0, ${i * 25})`);
+
+            legendItem
+                .append('rect')
+                .attr('width', 15)
+                .attr('height', 15)
+                .attr('fill', color(key))
+                .attr('x', 0)
+                .attr('y', 0);
+
+            legendItem
+                .append('text')
+                .attr('x', 20)
+                .attr('y', 12)
+                .attr('font-size', '12px')
+                .attr('fill', '#000')
+                .text(`${key}: ${((value / totalPercentage) * 100).toFixed(2)}%`);
+        });
     };
-
 
     useEffect(() => {
         if (!data || !dimensions.width || !dimensions.height) return;
@@ -511,16 +523,16 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
                 <div className="card h-100">
                     <div className="card-body p-0 d-flex flex-column" style={{ height: '80vh', overflow: 'hidden' }}>
                         <div style={{ flex: '1 1 auto', minHeight: 0, height: '85%', overflowX: 'auto' }}>
-                            <svg 
-                                ref={modalSvgRef} 
-                                style={{ 
-                                    display: 'block', 
+                            <svg
+                                ref={modalSvgRef}
+                                style={{
+                                    display: 'block',
                                     width: '100%',
                                     height: '100%'
                                 }}
                             ></svg>
                         </div>
-                        <div style={{ 
+                        <div style={{
                             padding: '8px',
                             backgroundColor: '#f8f9fa',
                             borderTop: '1px solid #dee2e6',
