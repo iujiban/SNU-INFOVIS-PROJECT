@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import { useDimensions } from '../hooks/useDimensions';
 
@@ -6,6 +6,10 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
     const containerRef = useRef();
     const svgRef = useRef();
     const dimensions = useDimensions(containerRef);
+
+    const [selectedBarData, setSelectedBarData] = useState(null);
+    const [selectedBar, setSelectedBar] = useState(null); // Track the selected DOM element
+
 
     const customColors = (selectedDrugType) => {
         const groupColors = {
@@ -168,6 +172,7 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
         const { width, height } = dimensions;
         const margin = { top: 20, right: 30, bottom: 120, left: 50 };
 
+        // Extract the drug group keys
         const drugGroups = Array.from(
             new Set(
                 processedData.flatMap((d) =>
@@ -210,6 +215,8 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
             .attr("viewBox", `0 0 ${width} ${height}`)
             .attr("preserveAspectRatio", "xMidYMid meet");
 
+        let selectedBar = null; // Track the selected bar
+
         svg
             .append("g")
             .selectAll("g")
@@ -223,21 +230,77 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
             .attr("y", (d) => y(d[1]))
             .attr("height", (d) => y(d[0]) - y(d[1]))
             .attr("width", x.bandwidth())
+            .on("mouseover", function (event, d) {
+                d3.select(this)
+                    .style("stroke", "black")
+                    .style("stroke-width", 2);
+
+                svg.selectAll(".x-axis-label")
+                    .filter((label) => label === d.data.msCode)
+                    .style("font-weight", "bold")
+                    .style("fill", "red");
+            })
+            .on("mouseout", function (event, d) {
+                if (selectedBar !== this) {
+                    d3.select(this)
+                        .style("stroke", "none")
+                        .style("stroke-width", 0);
+
+                    svg.selectAll(".x-axis-label")
+                        .filter((label) => label === d.data.msCode)
+                        .style("font-weight", "normal")
+                        .style("fill", "black");
+                }
+            })
+            .on("click", function (event, d) {
+                const drugValue = d[1] - d[0]
+                const msCode = d.data.msCode;
+
+                // Construct the selectedData object
+                const selectedData = {
+                    msCode,
+                    drugValue,
+                };
+
+                console.log("Selected Data:", selectedData);
+
+                // Check if the bar is already selected
+                if (selectedBar) {
+                    d3.select(selectedBar)
+                        .style("stroke", "none")
+                        .style("stroke-width", 0);
+                }
+
+                // Highlight the clicked bar
+                setSelectedBar(this);
+                d3.select(this)
+                    .style("stroke", "blue")
+                    .style("stroke-width", 3);
+
+                // Update the selected bar data
+                setSelectedBarData(selectedData);
+                console.log("setsELECTEDBar", setSelectedBar)
+            })
             .append("title")
             .text((d) => `${d.data.msCode}: ${d[1] - d[0]}%`);
-
-        svg
-            .append("g")
+        // Add X-axis
+        svg.append("g")
             .attr("transform", `translate(0,${height - margin.bottom})`)
             .call(d3.axisBottom(x))
             .selectAll("text")
             .attr("transform", "rotate(-45)")
-            .style("text-anchor", "end");
+            .style("text-anchor", "end")
+            .style("font-size", "10px")
+            .classed("x-axis-label", true);
 
+        // Add Y-axis
         svg.append("g").attr("transform", `translate(${margin.left},0)`).call(d3.axisLeft(y));
     };
 
-    const renderLegend = (selectedDrugType) => {
+    const renderLegend = (selectedDrugType, selectedCountry) => {
+        // Do not render the legend if selectedDrugType or selectedCountry is defined
+        if (selectedDrugType || selectedCountry) return null;
+
         // Define default group colors
         const groupColors = {
             "Cannabis and Synthetic Cannabinoids": "#1f77b4", // Blue
@@ -248,37 +311,13 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
             "Tranquillizers and Sedatives": "#7f7f7f", // Gray
             "MDMA and Ecstasy-like Drugs": "#e377c2", // Pink
             "Classic Hallucinogens": "#bcbd22", // Olive
-            "Miscellaneous": "#17becf" // Teal
+            "Miscellaneous": "#17becf", // Teal
         };
 
-        // Define dynamic type colors
-        const typeColors = [
-            "#1f77b4", // Blue
-            "#ff7f0e", // Orange
-            "#2ca02c", // Green
-            "#d62728", // Red
-            "#9467bd", // Purple
-            "#8c564b", // Brown
-            "#e377c2", // Pink
-            "#7f7f7f", // Gray
-            "#bcbd22", // Olive
-            "#17becf", // Teal
-        ];
-
         const legendColors = {};
-
-        // If no drug type is selected, use group colors
-        if (!selectedDrugType) {
-            Object.keys(groupColors).forEach((group) => {
-                legendColors[group] = groupColors[group];
-            });
-        } else {
-            // If a drug type is selected, use dynamic colors
-            const drugTypes = Object.keys(drugTypeLookup[selectedDrugType] || {});
-            drugTypes.forEach((drugType, index) => {
-                legendColors[drugType] = typeColors[index % typeColors.length];
-            });
-        }
+        Object.keys(groupColors).forEach((group) => {
+            legendColors[group] = groupColors[group];
+        });
 
         // Render the legend UI
         return (
@@ -325,96 +364,158 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
         // Clear the previous chart
         d3.select(svgRef.current).selectAll('*').remove();
 
+        // Check if there's no valid data
+        if (!processedData || processedData.length === 0 || !colorMap) {
+            const svg = d3
+                .select(svgRef.current)
+                .attr('width', width)
+                .attr('height', height)
+                .attr('viewBox', `0 0 ${width} ${height}`)
+                .attr('preserveAspectRatio', 'xMidYMid meet');
+
+            // Add "No Data Available" text to the center
+            svg.append('text')
+                .attr('x', width / 2)
+                .attr('y', height / 2)
+                .attr('text-anchor', 'middle')
+                .attr('font-size', '16px')
+                .attr('fill', '#666')
+                .text('No Data Available');
+            return; // Exit the function
+        }
+
         // Create an SVG container
         const svg = d3
             .select(svgRef.current)
             .attr('width', width)
-            .attr('height', height)
-            .attr('viewBox', `0 0 ${width} ${height}`)
+            .attr('height', height + 60)
+            .attr('viewBox', `0 0 ${width} ${height + 60}`)
             .attr('preserveAspectRatio', 'xMidYMid meet');
 
         // Prepare pie data
-        const pie = d3.pie().value((d) => d[1]); // Using object values
+        const pie = d3.pie().value((d) => d[1]);
         const arc = d3.arc().innerRadius(0).outerRadius(radius);
 
-        // Extract data for pie chart
-        const drugGroups = Object.entries(processedData[0]).filter(
-            ([key]) => key !== 'country' && key !== 'msCode' // Exclude non-drug keys
-        );
+        const drugGroups = Object.entries(processedData[0])
+            .filter(([key]) => key !== 'country' && key !== 'msCode') // Exclude non-drug keys
+            .sort((a, b) => b[1] - a[1]); // Sort by percentage in descending order
 
         const color = d3.scaleOrdinal()
             .domain(drugGroups.map(([key]) => key))
-            .range(Object.values(customColors(null))); // Use predefined group colors
+            .range(Object.values(colorMap));
 
         const pieData = pie(drugGroups);
 
-        // Append group container
+        // Draw the pie chart
         const g = svg.append('g').attr('transform', `translate(${width / 2}, ${height / 2})`);
 
-        // Create pie chart paths
         g.selectAll('path')
             .data(pieData)
             .join('path')
             .attr('d', arc)
-            .attr('fill', (d) => color(d.data[0])) // Use the key (drug group) for color
+            .attr('fill', (d) => color(d.data[0]))
             .attr('stroke', '#fff')
             .attr('stroke-width', 1)
             .append('title')
             .text((d) => `${d.data[0]}: ${parseFloat(d.data[1]).toFixed(2)}%`);
+
+        // Add dynamic color legend at the top-left corner
+        const legend = svg.append('g').attr('transform', `translate(10, 10)`); // Position legend at top-left
+
+        let totalPercentage = drugGroups.reduce((sum, [_, value]) => sum + value, 0);
+
+        drugGroups.forEach(([key, value], i) => {
+            const legendItem = legend.append('g').attr('transform', `translate(0, ${i * 25})`);
+
+            legendItem
+                .append('rect')
+                .attr('width', 15)
+                .attr('height', 15)
+                .attr('fill', color(key))
+                .attr('x', 0)
+                .attr('y', 0);
+
+            legendItem
+                .append('text')
+                .attr('x', 20)
+                .attr('y', 12)
+                .attr('font-size', '12px')
+                .attr('fill', '#000')
+                .text(`${key}: ${((value / totalPercentage) * 100).toFixed(2)}%`);
+        });
     };
+
 
     useEffect(() => {
         if (!data || !dimensions.width || !dimensions.height) return;
-
-        if (selectedCountry) {
-            if (!selectedDrugType) {
-                const processedData = processDataForStackedBar(data);
-                console.log("Processed Pie Data:", processedData);
-                createPieChart(processedData);
-            } else {
-                const processedData = selectedDrugType
-                    ? processDataFromPreprocessedLookup(drugTypeLookup, selectedDrugType)
-                    : processDataForStackedBar(data);
-
-                createPieChart(processedData)
+        console.log("selected", selectedBar);
+        console.log("Selected Bar Data:", selectedBarData);
+        const findDrugType = (processedData, selectedData) => {
+            if (!selectedData) {
+                console.warn("No selected data provided.");
+                return null; // Return null if selectedData is not set
             }
-        } else {
-            // Process data
+
+            const { msCode, drugValue } = selectedData;
+
+            const matchingData = processedData.find((entry) => entry.msCode === msCode);
+
+            if (!matchingData) {
+                console.warn(`No matching data found for msCode: ${msCode}`);
+                return null;
+            }
+
+            for (const [drugType, value] of Object.entries(matchingData)) {
+                if (drugType !== "msCode" && drugType !== "country" && value === drugValue) {
+                    return drugType; // Return the matching drugType
+                }
+            }
+
+            console.warn(`No matching drugType found for value: ${drugValue} in msCode: ${msCode}`);
+            return null;
+        };
+        if (selectedCountry) {
             const processedData = selectedDrugType
                 ? processDataFromPreprocessedLookup(drugTypeLookup, selectedDrugType)
                 : processDataForStackedBar(data);
 
-            // Generate colors dynamically based on selection
-            const colorMap = customColors(
-                selectedDrugType ? Object.keys(drugTypeLookup[selectedDrugType]) : null
-            );
-            console.log("processedData", processedData);
-            // Create chart
-            createStackedBarChart(processedData, colorMap);
-        }
-        /*
-        if (selectedCountry) {
-            console.log("Processed Pie Data:", processedData);
-            const processedData = processDataForPie(data, selectedCountry);
-            console.log("Processed Pie Data:", processedData);
-            createPieChart(processedData);
+            const colorMap = customColors(null);
+            createPieChart(processedData, colorMap);
         } else {
             const processedData = processDataForStackedBar(data);
-            createStackedBarChart(processedData);
+            const colorMap = customColors(null);
+            createStackedBarChart(processedData, colorMap);
         }
-        */
-    }, [data, selectedCountry, dimensions]);
+
+        if (selectedBarData) {
+            const processedData = processDataForStackedBar(data);
+            const drugType = findDrugType(processedData, selectedBarData);
+            console.log("Found Drug Type:", drugType);
+        } else {
+            console.log("No bar data selected yet.");
+        }
+    }, [data, selectedCountry, selectedDrugType, dimensions]);
 
     return (
         <div ref={containerRef} className="card h-100">
             <div className="card-header">
-                <h5 className="card-title mb-0">Drug Distribution</h5>
+                <h5 className="card-title mb-0">
+                    {selectedCountry
+                        ? `Drug Distribution in ${selectedCountry}`
+                        : selectedDrugType
+                            ? `Drug Types in ${selectedDrugType}`
+                            : 'Drug Distribution'}
+                </h5>
             </div>
             <div className="card-body d-flex flex-column">
                 <svg ref={svgRef} style={{ flexGrow: 1, width: '100%', height: '100%' }}></svg>
                 <div className="color-legend" style={{ marginTop: '10px' }}>
-                    <h6 style={{ marginBottom: '5px' }}>Color Legend:</h6>
-                    {renderLegend(selectedDrugType)}
+                    <h6 style={{ marginBottom: '5px' }}>
+                        {selectedCountry || selectedDrugType
+                            ? ''
+                            : 'Color Legend:'}
+                    </h6>
+                    {!selectedCountry && !selectedDrugType && renderLegend(selectedDrugType, selectedCountry)}
                 </div>
             </div>
         </div>
