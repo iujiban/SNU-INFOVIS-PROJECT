@@ -1,10 +1,10 @@
-import React, { useEffect, useRef, useState, useMemo } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import * as d3 from 'd3';
 import { useDimensions } from '../hooks/useDimensions';
 import ExpandButton from './ui/ExpandButton';
 import Modal from './ui/Modal';
 
-const SeizureChart = ({ data, selectedCountry, selectedDrugType, onBarDataSelect }) => {
+const SeizureChart = ({ data, selectedCountry, selectedDrugType }) => {
     const containerRef = useRef();
     const svgRef = useRef();
     const svgContainerRef = useRef();
@@ -13,7 +13,8 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType, onBarDataSelect
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedBarData, setSelectedBarData] = useState(null);
-    const [lookupMap, setLookupMap] = useState(new Map()); // Initialize the lookup map
+    const [selectedBar, setSelectedBar] = useState(null); // Track the selected DOM element
+
 
     const customColors = (selectedDrugType) => {
         const colors = {
@@ -40,35 +41,6 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType, onBarDataSelect
 
         return colorMap;
     };
-    const handleBarClick = (msCode, drugValue) => {
-        if (!lookupMap || !lookupMap.has(msCode)) {
-            console.warn(`No data found for msCode: ${msCode}`);
-            return;
-        }
-
-        // Retrieve the data for the clicked bar
-        const entry = lookupMap.get(msCode);
-
-        // Find the drug group matching the drugValue
-        const drugGroup = Object.entries(entry).find(
-            ([key, value]) => key !== 'msCode' && key !== 'country' && value === drugValue
-        );
-
-        if (drugGroup) {
-            setSelectedBarData({
-                msCode,
-                drugValue,
-                drugGroup: drugGroup[0], // The drug group name
-            });
-        } else {
-            console.warn(`No matching drug group found for msCode: ${msCode} and drugValue: ${drugValue}`);
-        }
-
-        if (onBarDataSelect) {
-            onBarDataSelect(selectedBarData)
-        }
-    };
-
 
     // Process data for Stacked Bar Chart
     const processDataForStackedBar = (data, selectedDrugType) => {
@@ -261,49 +233,30 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType, onBarDataSelect
             .attr("stroke", "#fff")
             .attr("stroke-width", 1)
             .on("mouseover", function (event, d) {
+                const drugGroup = d3.select(this.parentNode).datum().key;
+                const percentage = (d[1] - d[0]).toFixed(1);
+                setSelectedBarData({
+                    drugGroup,
+                    percentage,
+                    msCode: d.data.msCode,
+                });
 
+                // Highlight the bar
+                if (selectedBar) {
+                    d3.select(selectedBar).attr("stroke-width", 0);
+                }
                 d3.select(this)
-                    .style("stroke", "black")
-                    .style("stroke-width", 2);
-
-                svg.selectAll(".x-axis-label")
-                    .filter((label) => label === d.data.msCode)
-                    .style("font-weight", "bold")
-                    .style("fill", "red");
+                    .attr("stroke", "black")
+                    .attr("stroke-width", 2);
+                selectedBar = this;
             })
-            .on("mouseout", function (event, d) {
-                if (selectedBar !== this) {
-                    d3.select(this)
-                        .style("stroke", "none")
-                        .style("stroke-width", 0);
-
-                    svg.selectAll(".x-axis-label")
-                        .filter((label) => label === d.data.msCode)
-                        .style("font-weight", "normal")
-                        .style("fill", "black");
-                }
-            })
-            .on('click', function (event, d) {
-                const msCode = d.data.msCode;
-                const drugValue = d[1] - d[0]; // Height of the bar
-                handleBarClick(msCode, drugValue);
-                d3.selectAll('rect').attr('stroke', null); // Reset all strokes
-                if (selectedBarData?.msCode !== msCode) {
-                    d3.select(this)
-                        .attr('stroke', 'black')
-                        .attr('stroke-width', 2);
-                }
-            }).on('contextmenu', function (event, d) {
-                event.preventDefault(); // Prevent the default context menu
-
-                const msCode = d.data.msCode;
-                if (selectedBarData && selectedBarData.msCode === msCode) {
-                    // Deselect if the bar is right-clicked
-                    setSelectedBarData(null);
-                }
-
+            .on("mouseout", function () {
+                setSelectedBarData(null);
                 // Remove highlight
-                d3.select(this).attr('stroke', null);
+                if (selectedBar) {
+                    d3.select(selectedBar).attr("stroke-width", 0);
+                    selectedBar = null;
+                }
             });
 
         // Add x axis with word-by-word line breaks
@@ -602,12 +555,32 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType, onBarDataSelect
 
     useEffect(() => {
         if (!data || !dimensions.width || !dimensions.height) return;
-        const updateLookupMap = (processedData) => {
-            const map = new Map();
-            processedData.forEach((entry) => map.set(entry.msCode, entry));
-            setLookupMap(map);
-        };
+        console.log("selected", selectedBar);
+        console.log("Selected Bar Data:", selectedBarData);
+        const findDrugType = (processedData, selectedData) => {
+            if (!selectedData) {
+                console.warn("No selected data provided.");
+                return null;
+            }
 
+            const { msCode, drugValue } = selectedData;
+
+            const matchingData = processedData.find((entry) => entry.msCode === msCode);
+
+            if (!matchingData) {
+                console.warn(`No matching data found for msCode: ${msCode}`);
+                return null;
+            }
+
+            for (const [drugType, value] of Object.entries(matchingData)) {
+                if (drugType !== "msCode" && drugType !== "country" && value === drugValue) {
+                    return drugType;
+                }
+            }
+
+            console.warn(`No matching drugType found for value: ${drugValue} in msCode: ${msCode}`);
+            return null;
+        };
 
         if (selectedCountry) {
             const processedData = selectedDrugType
@@ -623,14 +596,20 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType, onBarDataSelect
             const processedData = processDataForStackedBar(data);
             const colorMap = customColors(null);
             createStackedBarChart(processedData, colorMap, svgRef);
-            updateLookupMap(processedData); // Update lookup map
             if (isModalOpen) {
                 createStackedBarChart(processedData, colorMap, modalSvgRef);
-                updateLookupMap(processedData); // Update lookup map
             }
         }
 
-    }, [data, dimensions.width, dimensions.height, selectedCountry, selectedDrugType, isModalOpen, selectedBarData]);
+        if (selectedBarData) {
+            const processedData = processDataForStackedBar(data);
+            const drugType = findDrugType(processedData, selectedBarData);
+            console.log("Found Drug Type:", drugType);
+        } else {
+            console.log("No bar data selected yet.");
+        }
+    }, [data, selectedCountry, selectedDrugType, dimensions, isModalOpen]);
+
     return (
         <div ref={containerRef} className="card h-100">
             <div className="card-header d-flex justify-content-between align-items-center">

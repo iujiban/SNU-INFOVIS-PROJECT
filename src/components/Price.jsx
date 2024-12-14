@@ -1,156 +1,103 @@
-import React, { useEffect, useRef, useState } from "react";
-import * as d3 from "d3";
-import { useDimensions } from "../hooks/useDimensions";
-import ExpandButton from "./ui/ExpandButton";
-import Modal from "./ui/Modal";
+import React, { useEffect, useRef } from 'react';
+import * as d3 from 'd3';
+import { useDimensions } from '../hooks/useDimensions';
 
-const PriceChart = ({ data, selectedCountry }) => {
+const Price = ({ data }) => {
     const containerRef = useRef();
     const svgRef = useRef();
-    const modalSvgRef = useRef();
     const dimensions = useDimensions(containerRef);
-    const [isModalOpen, setIsModalOpen] = useState(false);
 
-    const createChart = (svgRef) => {
-        if (!data || data.length === 0 || !dimensions.width || !dimensions.height) return;
+    useEffect(() => {
+        if (data && dimensions.width && dimensions.height) {
+            createLineChart();
+        }
+    }, [data, dimensions.width, dimensions.height]);
 
-        const margin = { top: 30, right: 200, bottom: 50, left: 50 };
+    const createLineChart = () => {
+        const margin = { top: 20, right: 30, bottom: 30, left: 60 };
         const width = dimensions.width - margin.left - margin.right;
         const height = dimensions.height - margin.top - margin.bottom;
 
-        const processedData = data
-            .filter((d) => d && d.Year && d["Past_year Total"] !== undefined)
-            .map((d) => ({
-                ...d,
-                AdjustedYear: Number(d.Year) - 1,
-                PastYearTotal: parseFloat(d["Past_year Total"]) || 0,
-            }))
-            .filter((d) => d.PastYearTotal > 0);
+        const processedData = data.map(d => ({
+            ...d,
+            Year: new Date(d.Year, 0, 1),
+            Minimum_USD: d.Minimum_USD === "" ? 0 : +d.Minimum_USD,
+            Maximum_USD: d.Maximum_USD === "" ? 0 : +d.Maximum_USD,
+            Typical_USD: d.Typical_USD === "" ? 0 : +d.Typical_USD
+        }));
 
-        if (processedData.length === 0) {
-            console.warn("No valid data after processing.");
-            return;
-        }
+        const filteredData = processedData
+            .filter(d => d.Minimum_USD > 0 && d.Maximum_USD > 0)
+            .sort((a, b) => a.Year - b.Year);
 
-        const keys = Array.from(new Set(processedData.map((d) => d.Drug)));
-        const years = Array.from(new Set(processedData.map((d) => d.AdjustedYear))).sort((a, b) => a - b);
+        // Clear previous chart
+        d3.select(svgRef.current).selectAll("*").remove();
 
-        const stackedData = d3.stack()
-            .keys(keys)
-            .value((group, key) => {
-                const entry = group[1].find((d) => d.Drug === key);
-                return entry ? entry.PastYearTotal : 0;
-            })(
-            Array.from(
-                d3.group(processedData, (d) => d.AdjustedYear)
-            )
-        );
-
-        const svg = d3.select(svgRef.current);
-        svg.selectAll("*").remove();
-
-        svg
+        const svg = d3.select(svgRef.current)
             .attr("width", dimensions.width)
             .attr("height", dimensions.height)
             .append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`);
 
-        const x = d3.scaleLinear()
-            .domain(d3.extent(years))
+
+        const x = d3.scaleTime()
+            .domain(d3.extent(filteredData, d => d.Year))
             .range([0, width]);
 
         const y = d3.scaleLinear()
-            .domain([0, d3.max(stackedData, (layer) => d3.max(layer, (d) => d[1]))])
-            .nice()
+            .domain([
+                d3.min(filteredData, d => d.Minimum_USD),
+                d3.max(filteredData, d => d.Maximum_USD)
+            ])
             .range([height, 0]);
 
-        const color = d3.scaleOrdinal()
-            .domain(keys)
-            .range(d3.schemeTableau10);
+        svg.append("g")
+            .attr("transform", `translate(0, ${height})`)
+            .call(d3.axisBottom(x));
 
         svg.append("g")
-            .attr("transform", `translate(0,${height})`)
-            .call(d3.axisBottom(x).ticks(5).tickFormat(d3.format("d")));
+            .call(d3.axisLeft(y));
 
-        svg.append("g").call(d3.axisLeft(y));
+        svg.append("path")
+            .datum(filteredData)
+            .attr("fill", "#cce5df")
+            .attr("stroke", "none")
+            .attr("d", d3.area()
+                .x(d => x(d.Year))
+                .y0(d => y(d.Maximum_USD))
+                .y1(d => y(d.Minimum_USD))
+            );
 
-        const area = d3.area()
-            .x((d) => x(d.data[0]))
-            .y0((d) => y(d[0]))
-            .y1((d) => y(d[1]));
+        svg.append("path")
+            .datum(filteredData)
+            .attr("fill", "none")
+            .attr("stroke", "steelblue")
+            .attr("stroke-width", 1.5)
+            .attr("d", d3.line()
+                .x(d => x(d.Year))
+                .y(d => y(d.Typical_USD))
+            );
 
-        svg.selectAll(".area")
-            .data(stackedData)
-            .join("path")
-            .attr("class", (d) => `area ${d.key}`)
-            .attr("fill", (d) => color(d.key))
-            .attr("d", area);
 
-        const legend = svg.append("g").attr("transform", `translate(${width + 20}, 0)`);
-
-        legend
-            .selectAll("rect")
-            .data(keys)
-            .join("rect")
-            .attr("x", 0)
-            .attr("y", (d, i) => i * 20)
-            .attr("width", 18)
-            .attr("height", 18)
-            .attr("fill", (d) => color(d));
-
-        legend
-            .selectAll("text")
-            .data(keys)
-            .join("text")
-            .attr("x", 25)
-            .attr("y", (d, i) => i * 20 + 9)
-            .attr("dy", "0.35em")
-            .text((d) => d);
+        // Add title
+        svg.append("text")
+            .attr("x", width / 2)
+            .attr("y", -margin.top / 2)
+            .attr("text-anchor", "middle")
+            .style("font-size", "16px")
+            .text("Price Trends Over Time");
     };
-
-    useEffect(() => {
-        createChart(svgRef);
-        if (isModalOpen) {
-            createChart(modalSvgRef);
-        }
-    }, [data, dimensions, selectedCountry, isModalOpen]);
 
     return (
         <div className="card h-100">
-            <div className="card-header d-flex justify-content-between align-items-center">
-                <h5 className="card-title mb-0">{selectedCountry ? `Drug Price in ${selectedCountry}` : 'Drug Price'}</h5>
-                <ExpandButton onClick={() => setIsModalOpen(true)} />
+            <div className="card-header">
+                <h5 className="card-title mb-0">Price Analysis</h5>
             </div>
-            <div className="card-body p-0">
-                <div ref={containerRef} style={{ width: '100%', height: '100%' }}>
-                    <svg 
-                        ref={svgRef}
-                        style={{ 
-                            display: 'block',
-                            width: '100%',
-                            height: '100%'
-                        }}
-                    ></svg>
-                </div>
+            <div className="card-body" ref={containerRef}>
+                <svg ref={svgRef} style={{ width: '100%', height: '100%' }}></svg>
             </div>
-            <Modal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                title={selectedCountry ? `Drug Price in ${selectedCountry}` : 'Drug Price'}
-            >
-                <div style={{ width: '100%', height: '80vh' }}>
-                    <svg 
-                        ref={modalSvgRef}
-                        style={{ 
-                            display: 'block',
-                            width: '100%',
-                            height: '100%'
-                        }}
-                    ></svg>
-                </div>
-            </Modal>
         </div>
     );
 };
 
-export default PriceChart;
+export default Price;

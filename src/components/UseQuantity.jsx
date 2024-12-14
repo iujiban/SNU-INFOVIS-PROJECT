@@ -4,7 +4,7 @@ import { useDimensions } from "../hooks/useDimensions";
 import ExpandButton from "./ui/ExpandButton";
 import Modal from "./ui/Modal";
 
-const UseQuantity = ({ data, selectedCountry }) => {
+const UseQuantity = ({ data }) => {
     const containerRef = useRef();
     const svgRef = useRef();
     const modalSvgRef = useRef();
@@ -14,121 +14,115 @@ const UseQuantity = ({ data, selectedCountry }) => {
     const createChart = (svgRef) => {
         if (!data || data.length === 0 || !dimensions.width || !dimensions.height) return;
 
-        const margin = { top: 30, right: 200, bottom: 50, left: 50 };
+        const margin = { top: 30, right: 50, bottom: 50, left: 70 };
         const width = dimensions.width - margin.left - margin.right;
         const height = dimensions.height - margin.top - margin.bottom;
 
-        const processedData = data
-            .filter((d) => d && d.Year && d["Past_year Total"] !== undefined)
-            .map((d) => ({
-                ...d,
-                AdjustedYear: Number(d.Year) - 1,
-                PastYearTotal: parseFloat(d["Past_year Total"]) || 0,
-            }))
-            .filter((d) => d.PastYearTotal > 0);
-
-        if (processedData.length === 0) {
-            console.warn("No valid data after processing.");
-            return;
-        }
-
-        const keys = Array.from(new Set(processedData.map((d) => d.Drug)));
-        const years = Array.from(new Set(processedData.map((d) => d.AdjustedYear))).sort((a, b) => a - b);
-
-        const stackedData = d3.stack()
-            .keys(keys)
-            .value((group, key) => {
-                const entry = group[1].find((d) => d.Drug === key);
-                return entry ? entry.PastYearTotal : 0;
-            })(
-            Array.from(
-                d3.group(processedData, (d) => d.AdjustedYear)
-            )
-        );
-
+        // Create SVG container
         const svg = d3.select(svgRef.current);
         svg.selectAll("*").remove();
 
-        svg
+        const chartGroup = svg
             .attr("width", dimensions.width)
             .attr("height", dimensions.height)
             .append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`);
 
-        const x = d3.scaleLinear()
-            .domain(d3.extent(years))
-            .range([0, width]);
+        // X-axis scale: Years
+        const x = d3.scaleBand()
+            .domain(data.map((d) => d.year))
+            .range([0, width])
+            .padding(0.2);
 
+        // Y-axis scale: Totals
         const y = d3.scaleLinear()
-            .domain([0, d3.max(stackedData, (layer) => d3.max(layer, (d) => d[1]))])
-            .nice()
-            .range([height, 0]);
+            .domain([0, d3.max(data, (d) => d.total) * 1.1]) // Add 10% padding to max value
+            .range([height, 0])
+            .nice();
 
-        const color = d3.scaleOrdinal()
-            .domain(keys)
-            .range(d3.schemeTableau10);
-
-        svg.append("g")
+        // Add X-axis
+        chartGroup.append("g")
             .attr("transform", `translate(0,${height})`)
-            .call(d3.axisBottom(x).ticks(5).tickFormat(d3.format("d")));
+            .call(d3.axisBottom(x).tickFormat(d3.format("d")))
+            .attr("font-size", "12px");
 
-        svg.append("g").call(d3.axisLeft(y));
+        // Add Y-axis
+        chartGroup.append("g")
+            .call(d3.axisLeft(y).ticks(5).tickFormat((d) => `${d} kg`))
+            .attr("font-size", "12px");
 
-        const area = d3.area()
-            .x((d) => x(d.data[0]))
-            .y0((d) => y(d[0]))
-            .y1((d) => y(d[1]));
+        // Add Y-axis label
+        chartGroup.append("text")
+            .attr("transform", "rotate(-90)")
+            .attr("x", -height / 2)
+            .attr("y", -50)
+            .attr("text-anchor", "middle")
+            .attr("font-size", "14px")
 
-        svg.selectAll(".area")
-            .data(stackedData)
-            .join("path")
-            .attr("class", (d) => `area ${d.key}`)
-            .attr("fill", (d) => color(d.key))
-            .attr("d", area);
 
-        const legend = svg.append("g").attr("transform", `translate(${width + 20}, 0)`);
+        // Add X-axis label
+        chartGroup.append("text")
+            .attr("x", width / 2)
+            .attr("y", height + 40)
+            .attr("text-anchor", "middle")
+            .attr("font-size", "14px")
+            .text("Year");
 
-        legend
-            .selectAll("rect")
-            .data(keys)
-            .join("rect")
-            .attr("x", 0)
-            .attr("y", (d, i) => i * 20)
-            .attr("width", 18)
-            .attr("height", 18)
-            .attr("fill", (d) => color(d));
+        // Create line generator
+        const line = d3.line()
+            .x((d) => x(d.year) + x.bandwidth() / 2) // Center the line on each year
+            .y((d) => y(d.total));
 
-        legend
-            .selectAll("text")
-            .data(keys)
+        // Draw line
+        chartGroup.append("path")
+            .datum(data)
+            .attr("fill", "none")
+            .attr("stroke", "steelblue")
+            .attr("stroke-width", 2)
+            .attr("d", line);
+
+        // Add points
+        chartGroup.selectAll("circle")
+            .data(data)
+            .join("circle")
+            .attr("cx", (d) => x(d.year) + x.bandwidth() / 2)
+            .attr("cy", (d) => y(d.total))
+            .attr("r", 5)
+            .attr("fill", "steelblue");
+
+        // Add labels to points
+        chartGroup.selectAll(".point-label")
+            .data(data)
             .join("text")
-            .attr("x", 25)
-            .attr("y", (d, i) => i * 20 + 9)
-            .attr("dy", "0.35em")
-            .text((d) => d);
+            .attr("x", (d) => x(d.year) + x.bandwidth() / 2)
+            .attr("y", (d) => y(d.total) - 10)
+            .attr("text-anchor", "middle")
+            .attr("font-size", "10px")
+            .text((d) => d.total);
     };
+
 
     useEffect(() => {
         createChart(svgRef);
         if (isModalOpen) {
             createChart(modalSvgRef);
         }
-    }, [data, dimensions, selectedCountry, isModalOpen]);
+    }, [data, dimensions, isModalOpen]);
 
     return (
         <div className="card h-100">
             <div className="card-header d-flex justify-content-between align-items-center">
-                <h5 className="card-title mb-0">{selectedCountry ? `Drug Use Quantity in ${selectedCountry}` : 'Drug Use Quantity'}</h5>
+                <h5 className="card-title mb-0">Drug Use Quantity</h5>
                 <ExpandButton onClick={() => setIsModalOpen(true)} />
             </div>
             <div className="card-body p-0">
-                <div ref={containerRef} style={{ width: '100%', height: '100%' }}>
-                    <svg 
+                <div ref={containerRef} style={{ width: "100%", height: "100%" }}>
+                    <svg
                         ref={svgRef}
-                        style={{ 
-                            display: 'block',
-                            width: '100%',
-                            height: '100%'
+                        style={{
+                            display: "block",
+                            width: "100%",
+                            height: "100%",
                         }}
                     ></svg>
                 </div>
@@ -136,15 +130,15 @@ const UseQuantity = ({ data, selectedCountry }) => {
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                title={selectedCountry ? `Drug Use Quantity in ${selectedCountry}` : 'Drug Use Quantity'}
+                title="Drug Use Quantity"
             >
-                <div style={{ width: '100%', height: '80vh' }}>
-                    <svg 
+                <div style={{ width: "100%", height: "80vh" }}>
+                    <svg
                         ref={modalSvgRef}
-                        style={{ 
-                            display: 'block',
-                            width: '100%',
-                            height: '100%'
+                        style={{
+                            display: "block",
+                            width: "100%",
+                            height: "100%",
                         }}
                     ></svg>
                 </div>
