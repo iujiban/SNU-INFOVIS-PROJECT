@@ -74,7 +74,6 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
         'United Kingdom': ['United Kingdom of Great Britain and Northern Ireland', 'UK', 'Great Britain'],
         'Czech Republic': ['Czechia', 'Czech Republic'],
         'Macedonia': ['North Macedonia', 'Macedonia'],
-        // Add mappings for common variations
         'Bolivia': ['Bolivia (Plurinational State of)', 'Bolivia'],
         'Venezuela': ['Venezuela (Bolivarian Republic of)', 'Venezuela'],
         'Iran': ['Iran (Islamic Republic of)', 'Iran'],
@@ -82,7 +81,19 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
         'Tanzania': ['United Republic of Tanzania', 'Tanzania'],
         'Congo': ['Democratic Republic of the Congo', 'Congo'],
         'Laos': ["Lao People's Democratic Republic", 'Laos'],
-        'Moldova': ['Republic of Moldova', 'Moldova']
+        'Moldova': ['Republic of Moldova', 'Moldova'],
+        'China': ["China", "People's Republic of China"],
+        'France': ['France', 'French Republic'],
+        'Germany': ['Germany', 'Federal Republic of Germany'],
+        'Japan': ['Japan'],
+        'India': ['India', 'Republic of India'],
+        'South Africa': ['South Africa', 'Republic of South Africa'],
+        'Egypt': ['Egypt', 'Arab Republic of Egypt'],
+        'Nigeria': ['Nigeria', 'Federal Republic of Nigeria'],
+        'Brazil': ['Brazil', 'Federative Republic of Brazil'],
+        'Canada': ['Canada'],
+        'Australia': ['Australia', 'Commonwealth of Australia'],
+        'New Zealand': ['New Zealand']
     };
 
     const normalizeCountryName = (name) => {
@@ -100,6 +111,7 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
             }
         }
 
+        console.log('Country name not found in mapping:', name);
         // If no mapping found, return the original name
         return name;
     };

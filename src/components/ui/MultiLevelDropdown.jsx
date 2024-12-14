@@ -18,7 +18,7 @@ const MultiLevelDropdown = ({ label, options, levels, onChange, value }) => {
         levels.forEach((level, index) => {
             if (index === 0) {
                 // First level shows unique values
-                newFilteredOptions[level] = [...new Set(options.map(opt => opt[level]))].filter(Boolean);
+                newFilteredOptions[level] = [...new Set(options.map(opt => opt[level]))].filter(Boolean).sort();
             } else {
                 // Other levels are filtered based on previous selections
                 const filtered = options.filter(opt => {
@@ -26,10 +26,20 @@ const MultiLevelDropdown = ({ label, options, levels, onChange, value }) => {
                         .filter(([key]) => levels.indexOf(key) < index)
                         .every(([key, value]) => opt[key] === value);
                 });
-                newFilteredOptions[level] = [...new Set(filtered.map(opt => opt[level]))].filter(Boolean);
+                newFilteredOptions[level] = [...new Set(filtered.map(opt => opt[level]))].filter(Boolean).sort();
+
+                // If we have a selection for this level but it's not in the filtered options,
+                // add it to ensure it's available for selection
+                if (selections[level] && !newFilteredOptions[level].includes(selections[level])) {
+                    console.log(`Adding missing selection ${selections[level]} to options for ${level}`);
+                    newFilteredOptions[level].push(selections[level]);
+                    newFilteredOptions[level].sort();
+                }
             }
         });
         
+        console.log('Filtered options:', newFilteredOptions);
+        console.log('Current selections:', selections);
         setFilteredOptions(newFilteredOptions);
     }, [options, levels, selections]);
 

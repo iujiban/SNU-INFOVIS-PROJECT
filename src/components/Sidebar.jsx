@@ -169,8 +169,8 @@ const regionOptions = useMemo(() => {
     };
 
     const handleRegionChange = (selectedRegion) => {
+        console.log('Region change:', selectedRegion);
         const { Region: region, SubRegion: subRegion, Country: country } = selectedRegion || {}; 
-        console.log('Sidebar handleRegionChange:', { selectedRegion, region, subRegion, country });
         onFilterChange({
             region: {
                 region: region || null,
@@ -190,6 +190,12 @@ const regionOptions = useMemo(() => {
     useEffect(() => {
         console.log('Sidebar props:', { selectedRegion, selectedCountry });
         console.log('Region options:', regionOptions);
+        
+        // Check if the selected country exists in the options
+        const hasCountry = regionOptions.some(opt => 
+            opt.Region === selectedRegion && opt.Country === selectedCountry
+        );
+        console.log('Selected country exists in options:', hasCountry);
     }, [selectedRegion, selectedCountry, regionOptions]);
 
     useEffect(() => {
