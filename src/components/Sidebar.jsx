@@ -31,7 +31,7 @@ const ageOptions = [
 const yearMin = 2018;
 const yearMax = 2022;
 
-const Sidebar = ({onFilterChange}) => {
+const Sidebar = ({onFilterChange, selectedRegion, selectedCountry}) => {
     const [yearStatic, setYearStatic] = useState({ minYear: 2018, maxYear: 2022 });
     const [selectedMode, setSelectedMode] = useState(null);
     const [yearRange, setYearRange] = useState({ minYear: yearMin, maxYear: yearMax });
@@ -64,27 +64,50 @@ const filteredData = useMemo(() => {
 }, [selectedMode]);
 
 const regionOptions = useMemo(() => {
-    if (!filteredData || filteredData.length === 0) {
-        console.log('Filtered Data is Empty');
-        return [];
-    }
+        // Create a base set of region options that always exist
+        const baseRegions = [
+            { Region: 'Europe', Country: 'Russia' },
+            { Region: 'Europe', Country: 'France' },
+            { Region: 'Europe', Country: 'Germany' },
+            { Region: 'Asia', Country: 'China' },
+            { Region: 'Asia', Country: 'Japan' },
+            { Region: 'Asia', Country: 'India' },
+            { Region: 'Africa', Country: 'South Africa' },
+            { Region: 'Africa', Country: 'Egypt' },
+            { Region: 'Africa', Country: 'Nigeria' },
+            { Region: 'Americas', Country: 'United States' },
+            { Region: 'Americas', Country: 'Canada' },
+            { Region: 'Americas', Country: 'Brazil' },
+            { Region: 'Oceania', Country: 'Australia' },
+            { Region: 'Oceania', Country: 'New Zealand' }
+        ];
 
-    const uniqueRegions = new Map();
-
-    filteredData.forEach((item) => {
-        const { Region, SubRegion, 'Country/Territory': CountryTerritory } = item; // Explicitly quote 'Country/Territory'
-        if (Region && SubRegion && CountryTerritory) {
-            uniqueRegions.set(
-                `${Region}-${SubRegion}-${CountryTerritory}`,
-                { Region: Region, SubRegion: SubRegion, Country: CountryTerritory }
-            );
+        if (!filteredData || filteredData.length === 0) {
+            console.log('Using base region options');
+            return baseRegions;
         }
-    });
 
-    const result = Array.from(uniqueRegions.values());
-    console.log('Dynamic Region Options:', result); // Debug generated options
-    return result;
-}, [filteredData]);
+        const uniqueRegions = new Map();
+
+        // Add base regions first
+        baseRegions.forEach(option => {
+            const key = `${option.Region}-${option.Country}`;
+            uniqueRegions.set(key, option);
+        });
+
+        // Then add any additional regions from the data
+        filteredData.forEach((item) => {
+            const { Region, 'Country/Territory': Country } = item;
+            if (Region && Country) {
+                const key = `${Region}-${Country}`;
+                uniqueRegions.set(key, { Region, Country });
+            }
+        });
+
+        const result = Array.from(uniqueRegions.values());
+        console.log('Dynamic Region Options:', result);
+        return result;
+    }, [filteredData]);
 
 
     const yearOptions = useMemo(() => {
@@ -147,7 +170,7 @@ const regionOptions = useMemo(() => {
 
     const handleRegionChange = (selectedRegion) => {
         const { Region: region, SubRegion: subRegion, Country: country } = selectedRegion || {}; 
-        console.log('Selected Region:', selectedRegion);
+        console.log('Sidebar handleRegionChange:', { selectedRegion, region, subRegion, country });
         onFilterChange({
             region: {
                 region: region || null,
@@ -164,7 +187,11 @@ const regionOptions = useMemo(() => {
         onFilterChange(payload);
     };
 
-    // Debug
+    useEffect(() => {
+        console.log('Sidebar props:', { selectedRegion, selectedCountry });
+        console.log('Region options:', regionOptions);
+    }, [selectedRegion, selectedCountry, regionOptions]);
+
     useEffect(() => {
         if (yearOptions.minYear !== yearStatic.minYear || yearOptions.maxYear !== yearStatic.maxYear) {
             setYearStatic({ minYear: yearOptions.minYear, maxYear: yearOptions.maxYear });
@@ -180,8 +207,12 @@ const regionOptions = useMemo(() => {
             <MultiLevelDropdown 
                 label="Region" 
                 options={regionOptions}
-                levels={['Region', 'Country' ]} 
+                levels={['Region', 'Country']} 
                 onChange={handleRegionChange}
+                value={selectedRegion || selectedCountry ? {
+                    Region: selectedRegion,
+                    Country: selectedCountry
+                } : null}
             />
             <Range 
                 min={yearStatic.minYear} 

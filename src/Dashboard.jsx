@@ -66,6 +66,22 @@ const Dashboard = () => {
         }));
     };
 
+    const handleMapCountrySelect = ({ region, country }) => {
+        console.log('Dashboard handleMapCountrySelect:', { region, country });
+        setFilters(prevFilters => {
+            const newFilters = {
+                ...prevFilters,
+                region: {
+                    region: region,
+                    subRegion: null,  // Reset subRegion when selecting from map
+                    country: country
+                }
+            };
+            console.log('New filters:', newFilters);
+            return newFilters;
+        });
+    };
+
     // Filtered PrevalanceNPS Data
     const filteredPrevalenceData = useMemo(() => {
         if (!PrevalenceNPSdata || PrevalenceNPSdata.length === 0) return [];
@@ -296,6 +312,10 @@ const Dashboard = () => {
 
     }, [filters.mode]);
 
+    useEffect(() => {
+        console.log('Dashboard filters updated:', filters);
+    }, [filters]);
+
     // Debug
     useEffect(() => {
        // console.log('Prevalence Data: ', filteredPrevalenceData);
@@ -321,7 +341,11 @@ const Dashboard = () => {
             <div className='row'>
                 {/* Sidebar */}
                 <div className='col-2 p-2'>
-                    <Sidebar onFilterChange={handleFilterChange} />
+                    <Sidebar 
+                        onFilterChange={handleFilterChange} 
+                        selectedRegion={filters.region.region}
+                        selectedCountry={filters.region.country}
+                    />
                 </div>
                 {/* Main Content */}
                 <div className='col-10 p-2'>
@@ -329,9 +353,10 @@ const Dashboard = () => {
                         {/* Map */}
                         <div className='col-6 p-2' style={{ height: '400px' }}>
                             <WorldMap 
-                                data={totalsByCountryDrugGroupAndYear}
+                                data={totalsByCountryAndYearForArray}
                                 selectedRegion={filters.region.region}
                                 selectedCountry={filters.region.country}
+                                onCountrySelect={handleMapCountrySelect}
                             />
                         </div>
                         {/* Prevalence */}

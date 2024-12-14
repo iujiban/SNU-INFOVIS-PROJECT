@@ -1,9 +1,16 @@
 import React, { useState, useEffect } from 'react';
 
-const MultiLevelDropdown = ({ label, options, levels, onChange }) => {
+const MultiLevelDropdown = ({ label, options, levels, onChange, value }) => {
     const [selections, setSelections] = useState({});
     const [filteredOptions, setFilteredOptions] = useState({});
     
+    // Update selections when value prop changes
+    useEffect(() => {
+        if (value) {
+            setSelections(value);
+        }
+    }, [value]);
+
     // Initialize filtered options for each level
     useEffect(() => {
         const newFilteredOptions = {};
@@ -11,7 +18,7 @@ const MultiLevelDropdown = ({ label, options, levels, onChange }) => {
         levels.forEach((level, index) => {
             if (index === 0) {
                 // First level shows unique values
-                newFilteredOptions[level] = [...new Set(options.map(opt => opt[level]))];
+                newFilteredOptions[level] = [...new Set(options.map(opt => opt[level]))].filter(Boolean);
             } else {
                 // Other levels are filtered based on previous selections
                 const filtered = options.filter(opt => {
@@ -19,7 +26,7 @@ const MultiLevelDropdown = ({ label, options, levels, onChange }) => {
                         .filter(([key]) => levels.indexOf(key) < index)
                         .every(([key, value]) => opt[key] === value);
                 });
-                newFilteredOptions[level] = [...new Set(filtered.map(opt => opt[level]))];
+                newFilteredOptions[level] = [...new Set(filtered.map(opt => opt[level]))].filter(Boolean);
             }
         });
         
@@ -30,42 +37,43 @@ const MultiLevelDropdown = ({ label, options, levels, onChange }) => {
         const levelIndex = levels.indexOf(level);
         const newSelections = {
             ...selections,
-            [level]: value
+            [level]: value || null
         };
         
         // Clear subsequent selections
         levels.slice(levelIndex + 1).forEach(nextLevel => {
-            delete newSelections[nextLevel];
+            newSelections[nextLevel] = null;
         });
         
         setSelections(newSelections);
-
         onChange(newSelections);
     };
 
     return (
-    <div className="card m-2">
-        <div className="card-body">
-            <h6 className="form-label">{label}</h6>
-            <div className="d-flex flex-column gap-2">
-                {levels.map((level, index) => (
-                    <select
-                    key={level}
-                    className="form-select"
-                    value={selections[level] || ''} // Fallback to empty string
-                    onChange={(e) => handleChange(level, e.target.value)}
-                    disabled={index > 0 && !selections[levels[index - 1]]} // Disable if no parent is selected
-                >
-                    <option value="">{`Select ${level}`}</option>
-                    {filteredOptions[level]?.map((value, i) => (
-                        <option key={i} value={value || ''}>{value || `Select ${level}`}</option> // Fallback value
+        <div className="card m-2">
+            <div className="card-body">
+                <h6 className="form-label">{label}</h6>
+                <div className="d-flex flex-column gap-2">
+                    {levels.map((level, index) => (
+                        <select
+                            key={level}
+                            className="form-select"
+                            value={selections[level] || ''}
+                            onChange={(e) => handleChange(level, e.target.value)}
+                            disabled={index > 0 && !selections[levels[index - 1]]}
+                        >
+                            <option value="">{`Select ${level}`}</option>
+                            {(filteredOptions[level] || []).map((value, i) => (
+                                <option key={`${level}-${value}-${i}`} value={value}>
+                                    {value}
+                                </option>
+                            ))}
+                        </select>
                     ))}
-                </select>
-                ))}
+                </div>
             </div>
         </div>
-    </div>
-);
+    );
 };
 
 export default MultiLevelDropdown;
