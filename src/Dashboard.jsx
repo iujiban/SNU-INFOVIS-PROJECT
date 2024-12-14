@@ -343,9 +343,14 @@ const Dashboard = () => {
                         <div className='col-6 p-2' style={{ height: '400px' }}>
                             <Seizure data={totalsByCountryDrugGroupAndYear} selectedCountry={filters.region.country} />
                         </div>
-                        {/* Price */}
+                        {/* Price Charts */}
                         <div className='col-6 p-2' style={{ height: '400px' }}>
-                            <Price data={filteredPrevalenceData} />
+                            <div className='col-12 h-50'>
+                                <Price data={filteredPrevalenceData} />
+                            </div>
+                            <div className='col-12 h-50'>
+                                <Price data={filteredPrevalenceData} />
+                            </div>
                         </div>
                     </div>
                 </div>
