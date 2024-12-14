@@ -38,14 +38,23 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
     }, [selectedRegion]);
 
     // Define pastel colors for continents
+    // const continentColors = {
+    //     'AF': '#f0d689',
+    //     'AN': '#E8BAFF',
+    //     'AS': '#f89cfa',
+    //     'EU': '#c386f1',
+    //     'NA': '#aff28b',
+    //     'OC': '#89d1dc',
+    //     'SA': '#aff28b'
+    // };
     const continentColors = {
-        'AF': '#f0d689',
-        'AN': '#E8BAFF',
-        'AS': '#f89cfa',
-        'EU': '#c386f1',
-        'NA': '#aff28b',
+        'AF': '#89d1dc',
+        'AN': '#89d1dc',
+        'AS': '#89d1dc',
+        'EU': '#89d1dc',
+        'NA': '#89d1dc',
         'OC': '#89d1dc',
-        'SA': '#aff28b'
+        'SA': '#89d1dc'
     };
 
     // Define edge colors for selected and unselected states
@@ -181,6 +190,37 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
     };
 
     useEffect(() => {
+        // Calculate alpha values for regions
+        const calculateRegionAlphas = () => {
+            const regionData = data.filter(d => d.level === "Region");
+            
+            // Calculate averages for each region
+            const regionAverages = regionData.map(region => {
+                const yearValues = Object.values(region.years);
+                const average = yearValues.reduce((sum, val) => sum + val, 0) / yearValues.length;
+                return { name: region.name, average };
+            });
+
+            // Find min and max averages
+            const minAvg = Math.min(...regionAverages.map(r => r.average));
+            const maxAvg = Math.max(...regionAverages.map(r => r.average));
+
+            // Scale averages to alpha values between 0.2 and 0.8
+            const alphaScale = d3.scaleLinear()
+                .domain([minAvg, maxAvg])
+                .range([0.1, 0.9]);
+
+            // Create map of region names to alpha values
+            const alphaMap = {};
+            regionAverages.forEach(region => {
+                alphaMap[region.name] = alphaScale(region.average);
+            });
+
+            return alphaMap;
+        };
+
+        const regionAlphas = calculateRegionAlphas();
+
         const renderMap = (svgElement, containerElement, width, height) => {
             // Remove the data length check since we want to render the map even without data
             if (!width || !worldGeoData || !svgElement || !containerElement) {
@@ -233,6 +273,7 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
                     const countryName = shape.properties.name;
                     const continentCode = countryToContinent[countryId];
                     const selectedCodes = regionToContinentCode[selectedRegion] || [];
+                    const region = getRegionFromContinentCode(continentCode);
                     
                     // Determine if this shape should be highlighted
                     let isSelected = false;
@@ -245,6 +286,7 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
                     }
 
                     const fillColor = continentColors[continentCode] || '#CCCCCC';
+                    const alpha = regionAlphas[region] || 0.5; // default to 0.5 if region not found
 
                     // Only draw non-selected countries in first pass
                     if (!isSelected) {
@@ -254,7 +296,7 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
                             .attr("stroke", edgeColors.default)
                             .attr("stroke-width", 0.5)
                             .attr("fill", fillColor)
-                            .attr("fill-opacity", 0.8);
+                            .attr("fill-opacity", alpha);
 
                         // Add event listeners for non-selected countries
                         addPathEventListeners(path, shape, containerElement, isSelected);
@@ -318,6 +360,11 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
 
         // Helper function for path event listeners
         const addPathEventListeners = (path, shape, containerElement, isSelected) => {
+            const countryId = shape.id;
+            const continentCode = countryToContinent[countryId];
+            const region = getRegionFromContinentCode(continentCode);
+            const baseAlpha = regionAlphas[region] || 0.5;
+
             path
                 .on("mouseover", function(e) {
                     d3.select(this)
@@ -348,7 +395,7 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
                 })
                 .on("mouseout", function() {
                     d3.select(this)
-                        .attr("fill-opacity", 0.8)
+                        .attr("fill-opacity", baseAlpha)
                         .attr("stroke-width", isSelected ? 1.5 : 0.5);
                     
                     d3.select(containerElement)
