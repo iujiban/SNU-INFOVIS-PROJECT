@@ -63,6 +63,18 @@ const SankeyChart = ({ data }) => {
     const svgRef = useRef();
     const dimensions = useDimensions(containerRef);
 
+    const firstLevelColors = {
+        "Cannabis and Synthetic Cannabinoids": "#8dd3c7",
+        "Cocaine and Derivatives": "#ffffb3",
+        "Opioids and Opiates": "#bebada",
+        "Amphetamines and Stimulants": "#fb8072",
+        "Classic Hallucinogens": "#80b1d3",
+        "Tranquillizers and Sedatives": "#fdb462",
+        "MDMA and Ecstasy-like Drugs": "#b3de69",
+        "NPS": "#fccde5",
+        "Miscellaneous": "#d9d9d9"
+    };
+
     useEffect(() => {
         if (!data || !data.nodes || !data.links || !dimensions) return;
 
@@ -81,16 +93,67 @@ const SankeyChart = ({ data }) => {
         const g = svg.append("g")
                     .attr("transform", `translate(${margin.left},${margin.top})`);
 
+        // Pre-calculate node values and create Sankey layout
+        const nodes = data.nodes.map(d => ({ ...d }));
+        const links = data.links.map(d => ({ ...d }));
+
+        // Calculate total value for each node
+        const nodeValues = new Map();
+        nodes.forEach(node => {
+            const outgoing = links.filter(l => l.source === node.index)
+                .reduce((sum, link) => sum + (link.value || 1), 0);
+            const incoming = links.filter(l => l.target === node.index)
+                .reduce((sum, link) => sum + (link.value || 1), 0);
+            nodeValues.set(node.index, Math.max(outgoing, incoming));
+        });
+
         // Sankey 설정
         const sankey = d3Sankey()
             .nodeWidth(15)
             .nodePadding(8)
-            .size([width, height]);
+            .size([width, height])
+            .nodeSort((a, b) => {
+                // Only sort nodes within the same depth level
+                if (a.depth === b.depth) {
+                    // Get the total value of incoming/outgoing links
+                    const valueA = links.reduce((sum, link) => {
+                        if (link.source === a || link.target === a) {
+                            return sum + (link.value || 1);
+                        }
+                        return sum;
+                    }, 0);
+                    
+                    const valueB = links.reduce((sum, link) => {
+                        if (link.source === b || link.target === b) {
+                            return sum + (link.value || 1);
+                        }
+                        return sum;
+                    }, 0);
+                    
+                    return valueB - valueA;  // Sort in descending order
+                }
+                return 0;  // Maintain original depth order
+            });
 
         const sankeyData = sankey({
-            nodes: data.nodes.map((d) => ({ ...d })),
-            links: data.links.map((d) => ({ ...d })),
+            nodes: nodes,
+            links: links
         });
+
+        // Get node depth for coloring
+        const getNodeColor = (node) => {
+            if (node.depth === 0) {
+                return firstLevelColors[node.name] || "#d9d9d9";
+            }
+            // For other levels, find the source node's color and make it lighter
+            const sourceLinks = sankeyData.links.filter(link => link.target === node);
+            if (sourceLinks.length > 0) {
+                const sourceNode = sourceLinks[0].source;
+                const sourceColor = firstLevelColors[sourceNode.name] || "#d9d9d9";
+                return d3.color(sourceColor).brighter(node.depth * 0.7);
+            }
+            return "#d9d9d9";
+        };
 
         // 링크 그리기
         g.append("g")
@@ -99,7 +162,7 @@ const SankeyChart = ({ data }) => {
             .enter()
             .append("path")
             .attr("d", sankeyLinkHorizontal())
-            .attr("stroke", "#007bff")
+            .attr("stroke", d => getNodeColor(d.source))
             .attr("fill", "none")
             .attr("stroke-width", (d) => Math.max(1, d.width))
             .style("stroke-opacity", 0.5);
@@ -116,7 +179,7 @@ const SankeyChart = ({ data }) => {
             .attr("y", (d) => d.y0)
             .attr("height", (d) => d.y1 - d.y0)
             .attr("width", sankey.nodeWidth())
-            .style("fill", "#69b3a2");
+            .style("fill", d => getNodeColor(d));
 
         // Adjust text size based on container width
         const fontSize = Math.max(8, Math.min(12, width / 50));
