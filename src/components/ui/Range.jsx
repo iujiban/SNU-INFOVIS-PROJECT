@@ -13,7 +13,7 @@ const Range = ({ name, min, max, step, onChange }) => {
     };
     
     return (
-        <div className="card m-2 my-2">
+        <div className="card">
             <div className="card-body">
                 <h6 className="form-label d-flex flex-wrap gap-2" htmlFor={id}>
                     <span>{name}:</span>

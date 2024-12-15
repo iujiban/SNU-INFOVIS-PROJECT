@@ -558,35 +558,33 @@ const Dashboard = () => {
             />
             {/* Main Content */}
             <div className='row'>
-                <div className='col-10 p-2'>
+                {/* Map */}
+                <div className='col-6 p-2' style={{ height: '400px' }}>
+                    <WorldMap
+                        data={totalsByCountryAndYearForArray}
+                        selectedRegion={filters.region.region}
+                        selectedCountry={filters.region.country}
+                        onCountrySelect={handleMapCountrySelect}
+                    />
+                </div>
+                {/* Prevalence */}
+                <div className='col-6 p-2' style={{ height: '400px' }}>
+                    <Prevalence data1={prevalenceData1} data2={prevalenceData2} />
+                </div>
+            </div>
+            <div className='row'>
+                {/* Seizure */}
+                <div className='col-6 p-2' style={{ height: '400px' }}>
+                    <Seizure data={totalsByCountryDrugGroupAndYear} selectedCountry={filters.region.country} selectedDrugType={filters.drugs.drugGroup} onBarDataSelect={handleBarDataSelect} />
+                </div>
+                {/* Price Charts */}
+                <div className='col-6 p-2' style={{ height: '400px' }}>
                     <div className='row'>
-                        {/* Map */}
-                        <div className='col-6 p-2' style={{ height: '400px' }}>
-                            <WorldMap
-                                data={totalsByCountryAndYearForArray}
-                                selectedRegion={filters.region.region}
-                                selectedCountry={filters.region.country}
-                                onCountrySelect={handleMapCountrySelect}
-                            />
+                        <div className='col-12 h-50'>
+                            <UseQuantity data={yearlyTotals} />
                         </div>
-                        {/* Prevalence */}
-                        <div className='col-6 p-2' style={{ height: '400px' }}>
-                            <Prevalence data1={prevalenceData1} data2={prevalenceData2} />
-                        </div>
-                    </div>
-                    <div className='row'>
-                        {/* Seizure */}
-                        <div className='col-6 p-2' style={{ height: '400px' }}>
-                            <Seizure data={totalsByCountryDrugGroupAndYear} selectedCountry={filters.region.country} selectedDrugType={filters.drugs.drugGroup} onBarDataSelect={handleBarDataSelect} />
-                        </div>
-                        {/* Price Charts */}
-                        <div className='col-6 p-2' style={{ height: '400px' }}>
-                            <div className='col-12 h-50'>
-                                <UseQuantity data={yearlyTotals} />
-                            </div>
-                            <div className='col-12 h-50'>
-                                <Price data={FilteredPriceData} />
-                            </div>
+                        <div className='col-12 h-50'>
+                            <Price data={FilteredPriceData} />
                         </div>
                     </div>
                 </div>
