@@ -7,52 +7,62 @@ import Modal from "./ui/Modal";
 
 // Sankey 데이터 준비 함수
 const prepareSankeyData = (data) => {
+    if (!data || !Array.isArray(data) || data.length === 0) {
+        console.warn('Invalid or empty data provided to Sankey diagram');
+        return { nodes: [], links: [] };
+    }
+
     const nodes = [];
     const links = [];
     const nodeMap = new Map(); // 노드 중복 방지
     const linkMap = new Map(); // 링크 중복 방지
 
     const addNode = (name) => {
+        if (!name) return -1; // Return invalid index for undefined/null names
         if (!nodeMap.has(name)) {
             nodeMap.set(name, nodes.length);
             nodes.push({ name });
-            console.log(`Added node: ${name} at index ${nodes.length - 1}`);
         }
         return nodeMap.get(name);
     };
+
     const addLink = (source, target, value) => {
+        if (source === -1 || target === -1) return; // Skip invalid nodes
+        
         const linkKey = `${source}-${target}`;
         if (linkMap.has(linkKey)) {
-            // If link exists, add to its value
             const existingLink = links[linkMap.get(linkKey)];
             existingLink.value += value;
         } else {
-            // If link doesn't exist, create new one
             linkMap.set(linkKey, links.length);
             links.push({
                 source,
                 target,
-                value: value || 1,
+                value: Math.max(1, value || 1), // Ensure value is at least 1
             });
         }
     };
 
-    // 데이터 순회: drugGroup → traffickingCategory → seizuredLocation
     data.forEach((item) => {
         const { drugGroup, traffickingCategory, seizuredLocation, total } = item;
-
-        if (!drugGroup || !traffickingCategory || !seizuredLocation) return;
-
+        
         const drugNode = addNode(drugGroup);
         const transportNode = addNode(traffickingCategory);
         const locationNode = addNode(seizuredLocation);
 
-        // drugGroup → traffickingCategory
-        addLink(drugNode, transportNode, total || 1);
-
-        // traffickingCategory → seizuredLocation
-        addLink(transportNode, locationNode, total || 1);
+        if (drugNode !== -1 && transportNode !== -1) {
+            addLink(drugNode, transportNode, total || 1);
+        }
+        
+        if (transportNode !== -1 && locationNode !== -1) {
+            addLink(transportNode, locationNode, total || 1);
+        }
     });
+
+    if (nodes.length === 0 || links.length === 0) {
+        console.warn('No valid nodes or links could be created from the data');
+        return { nodes: [], links: [] };
+    }
 
     return { nodes, links };
 };
@@ -76,7 +86,12 @@ const SankeyChart = ({ data }) => {
     };
 
     useEffect(() => {
-        if (!data || !data.nodes || !data.links || !dimensions) return;
+        if (!data || !data.nodes || !data.links || !dimensions || data.nodes.length === 0) {
+            // Clear the SVG if data is invalid
+            const svg = d3.select(svgRef.current);
+            svg.selectAll("*").remove();
+            return;
+        }
 
         const margin = { top: 10, right: 30, bottom: 10, left: 30 };
         const width = dimensions.width - margin.left - margin.right;
@@ -85,112 +100,86 @@ const SankeyChart = ({ data }) => {
         const svg = d3.select(svgRef.current);
         svg.selectAll("*").remove();
 
-        // Set SVG dimensions
         svg.attr("width", dimensions.width)
-            .attr("height", dimensions.height);
+           .attr("height", dimensions.height);
 
-        // Create main group with margins
         const g = svg.append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`);
 
-        // Pre-calculate node values and create Sankey layout
-        const nodes = data.nodes.map(d => ({ ...d }));
-        const links = data.links.map(d => ({ ...d }));
+        // Convert node references from names to indices
+        const nodeMap = new Map(data.nodes.map((node, i) => [node.name, i]));
+        const links = data.links.map(d => ({
+            source: typeof d.source === 'number' ? d.source : nodeMap.get(d.source),
+            target: typeof d.target === 'number' ? d.target : nodeMap.get(d.target),
+            value: d.value
+        })).filter(d => d.source !== undefined && d.target !== undefined);
 
-        // Calculate total value for each node
-        const nodeValues = new Map();
-        nodes.forEach(node => {
-            const outgoing = links.filter(l => l.source === node.index)
-                .reduce((sum, link) => sum + (link.value || 1), 0);
-            const incoming = links.filter(l => l.target === node.index)
-                .reduce((sum, link) => sum + (link.value || 1), 0);
-            nodeValues.set(node.index, Math.max(outgoing, incoming));
-        });
+        // Recreate nodes array to ensure proper indexing
+        const nodes = data.nodes.map((node, index) => ({
+            ...node,
+            index: index
+        }));
 
-        // Sankey 설정
+        // Verify data integrity
+        if (nodes.length === 0 || links.length === 0) {
+            console.warn('No valid nodes or links after processing');
+            return;
+        }
+
+        // Create Sankey generator with fixed node width and padding
         const sankey = d3Sankey()
             .nodeWidth(15)
             .nodePadding(8)
-            .size([width, height])
-            .nodeSort((a, b) => {
-                // Only sort nodes within the same depth level
-                if (a.depth === b.depth) {
-                    // Get the total value of incoming/outgoing links
-                    const valueA = links.reduce((sum, link) => {
-                        if (link.source === a || link.target === a) {
-                            return sum + (link.value || 1);
-                        }
-                        return sum;
-                    }, 0);
+            .extent([[0, 0], [width, height]])
+            .nodeId(d => d.index);
 
-                    const valueB = links.reduce((sum, link) => {
-                        if (link.source === b || link.target === b) {
-                            return sum + (link.value || 1);
-                        }
-                        return sum;
-                    }, 0);
-
-                    return valueB - valueA;  // Sort in descending order
-                }
-                return 0;  // Maintain original depth order
+        try {
+            // Generate the Sankey layout
+            const sankeyData = sankey({
+                nodes: nodes,
+                links: links
             });
 
-        const sankeyData = sankey({
-            nodes: nodes,
-            links: links
-        });
+            // Draw links
+            g.append("g")
+                .selectAll("path")
+                .data(sankeyData.links)
+                .enter()
+                .append("path")
+                .attr("d", sankeyLinkHorizontal())
+                .attr("stroke", d => d3.color(firstLevelColors[d.source.name] || "#d9d9d9"))
+                .attr("fill", "none")
+                .attr("stroke-width", d => Math.max(1, d.width))
+                .style("stroke-opacity", 0.5);
 
-        // Get node depth for coloring
-        const getNodeColor = (node) => {
-            if (node.depth === 0) {
-                return firstLevelColors[node.name] || "#d9d9d9";
-            }
-            // For other levels, find the source node's color and make it lighter
-            const sourceLinks = sankeyData.links.filter(link => link.target === node);
-            if (sourceLinks.length > 0) {
-                const sourceNode = sourceLinks[0].source;
-                const sourceColor = firstLevelColors[sourceNode.name] || "#d9d9d9";
-                return d3.color(sourceColor).brighter(node.depth * 0.7);
-            }
-            return "#d9d9d9";
-        };
+            // Draw nodes
+            const node = g.append("g")
+                .selectAll("g")
+                .data(sankeyData.nodes)
+                .enter()
+                .append("g");
 
-        // 링크 그리기
-        g.append("g")
-            .selectAll("path")
-            .data(sankeyData.links)
-            .enter()
-            .append("path")
-            .attr("d", sankeyLinkHorizontal())
-            .attr("stroke", d => getNodeColor(d.source))
-            .attr("fill", "none")
-            .attr("stroke-width", (d) => Math.max(1, d.width))
-            .style("stroke-opacity", 0.5);
+            node.append("rect")
+                .attr("x", d => d.x0)
+                .attr("y", d => d.y0)
+                .attr("height", d => Math.max(1, d.y1 - d.y0))
+                .attr("width", sankey.nodeWidth())
+                .style("fill", d => firstLevelColors[d.name] || "#d9d9d9");
 
-        // 노드 그리기
-        const node = g.append("g")
-            .selectAll("g")
-            .data(sankeyData.nodes)
-            .enter()
-            .append("g");
+            // Add labels
+            const fontSize = Math.max(8, Math.min(12, width / 50));
+            node.append("text")
+                .attr("x", d => d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6)
+                .attr("y", d => (d.y0 + d.y1) / 2)
+                .attr("dy", "0.35em")
+                .attr("text-anchor", d => d.x0 < width / 2 ? "start" : "end")
+                .text(d => d.name)
+                .style("font-size", `${fontSize}px`);
 
-        node.append("rect")
-            .attr("x", (d) => d.x0)
-            .attr("y", (d) => d.y0)
-            .attr("height", (d) => d.y1 - d.y0)
-            .attr("width", sankey.nodeWidth())
-            .style("fill", d => getNodeColor(d));
-
-        // Adjust text size based on container width
-        const fontSize = Math.max(8, Math.min(12, width / 50));
-
-        node.append("text")
-            .attr("x", (d) => (d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6))
-            .attr("y", (d) => (d.y0 + d.y1) / 2)
-            .attr("dy", "0.35em")
-            .attr("text-anchor", (d) => d.x0 < width / 2 ? "start" : "end")
-            .text((d) => d.name)
-            .style("font-size", `${fontSize}px`);
+        } catch (error) {
+            console.error('Error generating Sankey diagram:', error);
+            svg.selectAll("*").remove();
+        }
     }, [data, dimensions]);
 
     return (
@@ -202,24 +191,59 @@ const SankeyChart = ({ data }) => {
 
 // Prevalence 
 const Prevalence = ({ data, selectedRegion, selectedCountry }) => {
-    const containerRef1 = useRef();
-    const containerRef2 = useRef();
-    const modalContainerRef1 = useRef();
-    const modalContainerRef2 = useRef();
-    const dimensions1 = useDimensions(containerRef1);
-    const dimensions2 = useDimensions(containerRef2);
     const [isModalOpen, setIsModalOpen] = useState(false);
+    const containerRef1 = useRef();
+    const modalContainerRef1 = useRef();
 
-    // Dynamic leftKey 
-    const leftKey = selectedCountry ? "country" : "region";
+    // Ensure data is valid
+    if (!Array.isArray(data)) {
+        console.warn('Invalid data provided to Prevalence component');
+        return null;
+    }
 
+    // Filter data with validation
     const filteredData = data.filter((item) => {
-        if (selectedRegion && item.region !== selectedRegion) return false;
-        if (selectedCountry && item.country !== selectedCountry) return false;
-        return true;
+        if (!item || typeof item !== 'object') return false;
+        if (selectedRegion && (!item.region || item.region !== selectedRegion)) return false;
+        if (selectedCountry && (!item.country || item.country !== selectedCountry)) return false;
+        
+        // Ensure all required fields are present
+        return item.drugGroup && 
+               item.traffickingCategory && 
+               item.seizuredLocation && 
+               item.total !== undefined;
     });
 
+    // If no data after filtering, return early with a message
+    if (filteredData.length === 0) {
+        return (
+            <div className="card h-100">
+                <div className="card-header d-flex justify-content-between align-items-center">
+                    <h5 className="card-title mb-0">Drug Trafficking Flow</h5>
+                </div>
+                <div className="card-body d-flex align-items-center justify-content-center">
+                    <p>No data available for the selected filters</p>
+                </div>
+            </div>
+        );
+    }
+
     const sankeyData = prepareSankeyData(filteredData);
+
+    // Verify sankeyData structure
+    if (!sankeyData || !sankeyData.nodes || !sankeyData.links || 
+        sankeyData.nodes.length === 0 || sankeyData.links.length === 0) {
+        return (
+            <div className="card h-100">
+                <div className="card-header d-flex justify-content-between align-items-center">
+                    <h5 className="card-title mb-0">Drug Trafficking Flow</h5>
+                </div>
+                <div className="card-body d-flex align-items-center justify-content-center">
+                    <p>Unable to generate flow diagram with current data</p>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="card h-100">
