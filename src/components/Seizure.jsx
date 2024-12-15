@@ -9,6 +9,7 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType, onBarDataSelect
     const svgRef = useRef();
     const svgContainerRef = useRef();
     const modalSvgRef = useRef();
+    const modalSvgContainerRef = useRef(); // New ref for modal SVG container
     const dimensions = useDimensions(containerRef);
 
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -173,7 +174,6 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType, onBarDataSelect
         // Normalize the data
         const normalizedData = Object.entries(groupedData).map(([msCode, { country, drugs }]) => {
             const total = Object.values(drugs).reduce((sum, value) => sum + value, 0);
-
             const normalized = Object.keys(drugs).reduce((acc, drugName) => {
                 acc[drugName] = (drugs[drugName] / total) * 100; // Convert to percentages
                 return acc;
@@ -393,9 +393,9 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType, onBarDataSelect
     };
 
     // Create Vertical Bar Chart
-    const createPieChart = (processedData, colorMap) => {
+    const createBarChart = (processedData, colorMap, targetSvgRef) => {
         // Get the container dimensions
-        const svgContainer = d3.select(svgContainerRef.current);
+        const svgContainer = targetSvgRef === modalSvgRef ? d3.select(modalSvgContainerRef.current) : d3.select(svgContainerRef.current);
         const containerDimensions = svgContainer.node().getBoundingClientRect();
         const width = containerDimensions.width;
         const height = containerDimensions.height;
@@ -406,12 +406,12 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType, onBarDataSelect
         const chartHeight = height - margin.top - margin.bottom;
 
         // Clear the previous chart
-        d3.select(svgRef.current).selectAll('*').remove();
+        d3.select(targetSvgRef.current).selectAll('*').remove();
 
         // Check if there's no valid data
         if (!processedData || processedData.length === 0 || !colorMap) {
             const svg = d3
-                .select(svgRef.current)
+                .select(targetSvgRef.current)
                 .attr('width', width)
                 .attr('height', height)
                 .attr('viewBox', `0 0 ${width} ${height}`)
@@ -446,7 +446,7 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType, onBarDataSelect
         const yAxisMax = clipThreshold;
 
         // Create SVG that fills the container
-        const svg = d3.select(svgRef.current)
+        const svg = d3.select(targetSvgRef.current)
             .attr('width', width)
             .attr('height', height)
             .attr('viewBox', `0 0 ${width} ${height}`)
@@ -615,9 +615,9 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType, onBarDataSelect
                 : processDataForStackedBar(data);
 
             const colorMap = customColors(null);
-            createPieChart(processedData, colorMap, svgRef);
+            createBarChart(processedData, colorMap, svgRef);
             if (isModalOpen) {
-                createPieChart(processedData, colorMap, modalSvgRef);
+                createBarChart(processedData, colorMap, modalSvgRef);
             }
         } else {
             const processedData = processDataForStackedBar(data);
@@ -678,7 +678,7 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType, onBarDataSelect
             >
                 <div className="card h-100">
                     <div className="card-body p-0 d-flex flex-column" style={{ height: '80vh', overflow: 'hidden' }}>
-                        <div style={{ flex: '1 1 auto', minHeight: 0, height: '80%', overflowX: 'auto' }}>
+                        <div ref={modalSvgContainerRef} style={{ flex: '1 1 auto', minHeight: 0, height: '80%', overflowX: 'auto' }}>
                             <svg
                                 ref={modalSvgRef}
                                 style={{
