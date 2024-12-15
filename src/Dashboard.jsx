@@ -6,12 +6,11 @@ import Drugdata from './data/Drug_seizures_2018_2022.json';
 import PrevalenceNPSdata from './data/Prevalence_of_drug_use_NPS_General.json';
 import PrevalenceNonNPSdata from './data/Prevalence_of_drug_use_NonNPS_General.json';
 import PriceData from './data/Prices_of_drugs.json';
-/*
 import IDSDataOne from './data/IDS_data_2018.json';
 import IDSDataTwo from './data/IDS_data_2019.json';
 import IDSDataThree from './data/IDS_data_2020.json';
 import IDSDataFour from './data/IDS_data_2021.json';
-*/
+import IDSDataFive from './data/IDS_data_2022.json';
 
 // Components
 import Sidebar from './components/Sidebar';
@@ -74,15 +73,145 @@ const Dashboard = () => {
 
     const [selectedBarData, setSelectedBarData] = useState(null);
     const handleBarDataSelect = (data) => {
-        console.log("Selected Bar Data in D");
         setSelectedBarData(data);
     }
+    const IdsData = [...IDSDataOne, ...IDSDataTwo, ...IDSDataThree, IDSDataFour, ...IDSDataFive]
+
+    // Filtered IDS_DATA
+    const idsDataFilteredData = useMemo(() => {
+        if (!IdsData || IdsData.length === 0) return [];
+
+        return IdsData.filter((item) => {
+            const year = Number(item.Year);
+
+            // 필터 조건 확인
+            const matchesRegion = filters.region.region ? item["Region"] === filters.region.region : true;
+            const matchesSubRegion = filters.region.subRegion ? item["SubRegion"] === filters.region.subRegion : true;
+            const matchesCountry = filters.region.country ? item["Country/Territory"] === filters.region.country : true;
+            const matchesDrugGroup = filters.drugs.drugGroup ? item["Drug group"] === filters.drugs.drugGroup : true;
+
+            // 필터링 조건 적용
+            return (
+                year >= filters.year[0] && // Year 필터
+                year <= filters.year[1] &&
+                matchesRegion && // Region 필터
+                matchesSubRegion && // SubRegion 필터
+                matchesCountry && // Country/Territory 필터
+                matchesDrugGroup // Drug Group 필터
+            );
+        });
+    }, [filters, IdsData]);
+
+    const totalsByRegionHierarchy = useMemo(() => {
+        if (!idsDataFilteredData || idsDataFilteredData.length === 0) {
+            console.warn("No filtered IDS data found");
+            return [];
+        }
+
+        const yearRange = filters.year || [];
+        const minYear = yearRange[0] || 2018;
+        const maxYear = yearRange[1] || 2022;
+
+        const totalsMap = new Map(); // 중복 항목을 합산하기 위한 Map
+
+        // 데이터 그룹화 및 누적 계산
+        idsDataFilteredData.forEach((item) => {
+            const {
+                Region: region,
+                'Country/Territory': country,
+                SeizuredLocation: seizuredLocation,
+                SeizuredLocationCategory: seizuredCategory,
+                DrugGroup: drugGroup,
+                TraffickingTransportationCategory: traffickingCategory, // 추가된 항목
+                Year: year,
+                Q2,
+            } = item;
+
+            const weight = parseFloat(Q2) || 0; // 압수량
+            if (
+                !region ||
+                !country ||
+                !seizuredLocation ||
+                !seizuredCategory ||
+                !drugGroup ||
+                !traffickingCategory || // 추가 조건
+                !year ||
+                weight <= 0
+            )
+                return;
+
+            // Unique Key 생성
+            const key = `${region} > ${country} > ${seizuredLocation} > ${seizuredCategory} > ${drugGroup} > ${traffickingCategory}`;
+
+            // 연도 초기화
+            const yearly = {};
+            for (let y = minYear; y <= maxYear; y++) {
+                yearly[y] = 0;
+            }
+
+            if (!totalsMap.has(key)) {
+                totalsMap.set(key, {
+                    region,
+                    country,
+                    seizuredLocation,
+                    seizuredCategory,
+                    drugGroup,
+                    traffickingCategory, // 추가된 항목
+                    total: 0,
+                    yearly: { ...yearly },
+                });
+            }
+
+            // 데이터 누적
+            const entry = totalsMap.get(key);
+            entry.total += weight;
+            entry.yearly[year] += weight;
+
+            totalsMap.set(key, entry);
+        });
+
+        const resultArray = Array.from(totalsMap.values());
+        return resultArray;
+    }, [idsDataFilteredData, filters.year]);
+
+    useEffect(() => {
+        console.log("Filtered Data with Totals:", totalsByRegionHierarchy);
+    }, [totalsByRegionHierarchy]);
+
+    const yearlyIDSTotals = useMemo(() => {
+        if (!idsDataFilteredData || idsDataFilteredData.length === 0) return [];
+
+        // Initialize totals for each year
+        const yearTotalsMap = {
+            2018: 0,
+            2019: 0,
+            2020: 0,
+            2021: 0,
+            2022: 0,
+        };
+
+        // Accumulate weights for each year
+        idsDataFilteredData.forEach((item) => {
+            const year = Number(item.Year);
+            const weight = parseFloat(item.Kilograms) || 0; // Assuming weight is in "Kilograms"
+
+            if (yearTotalsMap.hasOwnProperty(year)) {
+                yearTotalsMap[year] += weight;
+            }
+        });
+
+        // Convert to array of objects
+        return Object.entries(yearTotalsMap).map(([year, total]) => ({
+            year: Number(year),
+            total,
+        }));
+    }, [idsDataFilteredData]);
+
 
 
 
     const handleMapCountrySelect = ({ region, country }) => {
-        console.log('Dashboard handleMapCountrySelect:', { region, country });
-        // Reset both filters and notify Sidebar
+
         handleFilterChange({
             region: {
                 region: region,
@@ -569,7 +698,7 @@ const Dashboard = () => {
                 </div>
                 {/* Prevalence */}
                 <div className='col-6 p-2' style={{ height: '400px' }}>
-                    <Prevalence data1={prevalenceData1} data2={prevalenceData2} />
+                    <Prevalence data={totalsByRegionHierarchy} />
                 </div>
             </div>
             <div className='row'>

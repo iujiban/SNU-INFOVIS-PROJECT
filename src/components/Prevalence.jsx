@@ -1,11 +1,116 @@
-import React, { useEffect, useRef, useState } from 'react';
-import * as d3 from 'd3';
-import * as bootstrap from 'bootstrap';
-import { useDimensions } from '../hooks/useDimensions';
-import ExpandButton from './ui/ExpandButton';
-import Modal from './ui/Modal';
+import React, { useEffect, useRef, useState } from "react";
+import * as d3 from "d3";
+import { sankey as d3Sankey, sankeyLinkHorizontal } from "d3-sankey";
+import { useDimensions } from "../hooks/useDimensions";
+import ExpandButton from "./ui/ExpandButton";
+import Modal from "./ui/Modal";
 
-const Prevalence = ({ data1, data2 }) => {
+// Sankey 데이터 준비 함수
+const prepareSankeyData = (data) => {
+    const nodes = [];
+    const links = [];
+    const nodeMap = new Map(); // 노드 중복 방지
+
+    const addNode = (name) => {
+        if (!nodeMap.has(name)) {
+            nodeMap.set(name, nodes.length);
+            nodes.push({ name });
+        }
+        return nodeMap.get(name);
+    };
+
+    // 데이터 순회: drugGroup → traffickingCategory → seizuredLocation
+    data.forEach((item) => {
+        const { drugGroup, traffickingCategory, seizuredLocation, total } = item;
+
+        if (!drugGroup || !traffickingCategory || !seizuredLocation) return;
+
+        const drugNode = addNode(drugGroup);
+        const transportNode = addNode(traffickingCategory);
+        const locationNode = addNode(seizuredLocation);
+
+        // drugGroup → traffickingCategory
+        links.push({
+            source: drugNode,
+            target: transportNode,
+            value: total || 1,
+        });
+
+        // traffickingCategory → seizuredLocation
+        links.push({
+            source: transportNode,
+            target: locationNode,
+            value: total || 1,
+        });
+    });
+
+    return { nodes, links };
+};
+
+// SankeyChart 
+const SankeyChart = ({ data }) => {
+    const svgRef = useRef();
+
+    useEffect(() => {
+        if (!data || !data.nodes || !data.links) return;
+
+        const width = 800;
+        const height = 600;
+
+        const svg = d3.select(svgRef.current);
+        svg.selectAll("*").remove(); // 기존 SVG 초기화
+
+        // Sankey 설정
+        const sankey = d3Sankey()
+            .nodeWidth(20)
+            .nodePadding(10)
+            .size([width, height]);
+
+        const sankeyData = sankey({
+            nodes: data.nodes.map((d) => ({ ...d })),
+            links: data.links.map((d) => ({ ...d })),
+        });
+
+        // 링크 그리기
+        svg.append("g")
+            .selectAll("path")
+            .data(sankeyData.links)
+            .enter()
+            .append("path")
+            .attr("d", sankeyLinkHorizontal())
+            .attr("stroke", "#007bff")
+            .attr("fill", "none")
+            .attr("stroke-width", (d) => Math.max(1, d.width))
+            .style("stroke-opacity", 0.5);
+
+        // 노드 그리기
+        const node = svg.append("g")
+            .selectAll("g")
+            .data(sankeyData.nodes)
+            .enter()
+            .append("g");
+
+        node.append("rect")
+            .attr("x", (d) => d.x0)
+            .attr("y", (d) => d.y0)
+            .attr("height", (d) => d.y1 - d.y0)
+            .attr("width", sankey.nodeWidth())
+            .style("fill", "#69b3a2");
+
+        node.append("text")
+            .attr("x", (d) => d.x0 - 6)
+            .attr("y", (d) => (d.y0 + d.y1) / 2)
+            .attr("dy", "0.35em")
+            .attr("text-anchor", "end")
+            .text((d) => d.name)
+            .style("font-size", "12px");
+    }, [data]);
+
+    return <svg ref={svgRef} width={800} height={600}></svg>;
+};
+
+// Prevalence 
+const Prevalence = ({ data, selectedRegion, selectedCountry }) => {
     const containerRef1 = useRef();
     const containerRef2 = useRef();
     const modalContainerRef1 = useRef();
@@ -14,76 +119,16 @@ const Prevalence = ({ data1, data2 }) => {
     const dimensions2 = useDimensions(containerRef2);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    useEffect(() => {
-        if (data1 && data2 && dimensions1.width && dimensions2.width) {
-            createDonutChart(data1, containerRef1, "Category Distribution", dimensions1);
-            createDonutChart(data2, containerRef2, "Type Distribution", dimensions2);
-            if (isModalOpen) {
-                createDonutChart(data1, modalContainerRef1, "Category Distribution", dimensions1);
-                createDonutChart(data2, modalContainerRef2, "Type Distribution", dimensions2);
-            }
-        }
-    }, [data1, data2, dimensions1.width, dimensions1.height, dimensions2.width, dimensions2.height, isModalOpen]);
+    // Dynamic leftKey 
+    const leftKey = selectedCountry ? "country" : "region";
 
-    const createDonutChart = (data, ref, title, dimensions) => {
-        // Calculate responsive dimensions
-        const width = dimensions.width;
-        const height = dimensions.height;
-        const margin = 40;
-        const radius = Math.min(width, height) / 2 - margin;
+    const filteredData = data.filter((item) => {
+        if (selectedRegion && item.region !== selectedRegion) return false;
+        if (selectedCountry && item.country !== selectedCountry) return false;
+        return true;
+    });
 
-        // Clear previous chart
-        d3.select(ref.current).selectAll("*").remove();
-
-        const svg = d3.select(ref.current)
-            .append("svg")
-            .attr("width", "100%")
-            .attr("height", "100%")
-            .attr("preserveAspectRatio", "xMinYMin meet")
-            .attr("viewBox", `0 0 ${width} ${height}`)
-            .style("display", "block")
-            .style("margin", 0)
-            .append("g")
-            .attr("transform", `translate(${width / 2},${height / 2})`);
-
-        const color = d3.scaleOrdinal()
-            .domain(data.map(d => d.label))
-            .range(d3.schemeCategory10);
-
-        const pie = d3.pie()
-            .value(d => d.value);
-
-        const arc = d3.arc()
-            .innerRadius(radius * 0.6)
-            .outerRadius(radius);
-
-        // Add the arcs
-        const paths = svg.selectAll("path")
-            .data(pie(data))
-            .join("path")
-            .attr("d", arc)
-            .attr("fill", d => color(d.data.label))
-            .attr("stroke", "white")
-            .style("stroke-width", "2px");
-
-        // Add labels
-        svg.selectAll("text")
-            .data(pie(data))
-            .join("text")
-            .attr("transform", d => `translate(${arc.centroid(d)})`)
-            .attr("dy", "0.35em")
-            .text(d => d.data.label)
-            .style("text-anchor", "middle")
-            .style("font-size", "12px")
-            .style("fill", "white");
-
-        // Add title
-        svg.append("text")
-            .attr("text-anchor", "middle")
-            .attr("y", -height/2 + margin)
-            .text(title)
-            .style("font-size", "16px");
-    };
+    const sankeyData = prepareSankeyData(filteredData);
 
     return (
         <div className="card h-100">
@@ -92,50 +137,22 @@ const Prevalence = ({ data1, data2 }) => {
                 <ExpandButton onClick={() => setIsModalOpen(true)} />
             </div>
             <div className="card-body p-0">
-                <div style={{ display: 'flex', justifyContent: 'space-around', height: '100%', padding: 0 }}>
-                    <div ref={containerRef1} style={{ flex: 1, height: '100%', width: '100%' }}>
-                        <svg style={{ 
-                            display: 'block', 
-                            width: '100%', 
-                            height: '100%',
-                            maxWidth: '100%',
-                            margin: 0
-                        }}></svg>
+                <div style={{ display: "flex", justifyContent: "space-around", height: "100%" }}>
+                    <div ref={containerRef1} style={{ flex: 1 }}>
+                        <SankeyChart data={sankeyData} />
                     </div>
-                    <div ref={containerRef2} style={{ flex: 1, height: '100%', width: '100%' }}>
-                        <svg style={{ 
-                            display: 'block', 
-                            width: '100%', 
-                            height: '100%',
-                            maxWidth: '100%',
-                            margin: 0
-                        }}></svg>
+                    <div ref={containerRef2} style={{ flex: 1 }}>
+                        <SankeyChart data={sankeyData} />
                     </div>
                 </div>
             </div>
-            <Modal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                title="Drug Prevalence"
-            >
-                <div style={{ display: 'flex', justifyContent: 'space-around', height: '80vh', padding: 0 }}>
-                    <div ref={modalContainerRef1} style={{ flex: 1, height: '100%', width: '100%' }}>
-                        <svg style={{ 
-                            display: 'block', 
-                            width: '100%', 
-                            height: '100%',
-                            maxWidth: '100%',
-                            margin: 0
-                        }}></svg>
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Drug Prevalence">
+                <div style={{ display: "flex", justifyContent: "space-around", height: "80vh" }}>
+                    <div ref={modalContainerRef1} style={{ flex: 1 }}>
+                        <SankeyChart data={sankeyData} />
                     </div>
-                    <div ref={modalContainerRef2} style={{ flex: 1, height: '100%', width: '100%' }}>
-                        <svg style={{ 
-                            display: 'block', 
-                            width: '100%', 
-                            height: '100%',
-                            maxWidth: '100%',
-                            margin: 0
-                        }}></svg>
+                    <div ref={modalContainerRef2} style={{ flex: 1 }}>
+                        <SankeyChart data={sankeyData} />
                     </div>
                 </div>
             </Modal>

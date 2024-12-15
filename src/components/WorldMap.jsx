@@ -25,17 +25,6 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
         }
     };
 
-    useEffect(() => {
-        console.log('WorldMap props:', {
-            selectedRegion,
-            selectedCountry,
-            hasOnCountrySelect: !!onCountrySelect
-        });
-    }, [selectedRegion, selectedCountry, onCountrySelect]);
-
-    useEffect(() => {
-        console.log('WorldMap selectedRegion:', selectedRegion);
-    }, [selectedRegion]);
 
     const continentColors = {
         'AF': '#89d1dc',
@@ -103,7 +92,7 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
 
     const normalizeCountryName = (name) => {
         if (!name) return null;
-        
+
         if (countryNameMapping[name]) {
             return name;
         }
@@ -114,12 +103,10 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
             }
         }
 
-        console.log('Country name not found in mapping:', name);
         return name;
     };
 
     useEffect(() => {
-        console.log('Fetching GeoJSON data...');
         d3.json("https://raw.githubusercontent.com/holtzy/D3-graph-gallery/master/DATA/world.geojson")
             .then(data => {
                 console.log('GeoJSON data received:', data);
@@ -129,11 +116,6 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
                 console.error('Error loading GeoJSON:', error);
             });
     }, []);
-
-    useEffect(() => {
-        console.log('Selected country:', selectedCountry);
-        console.log('Normalized country:', selectedCountry ? normalizeCountryName(selectedCountry) : null);
-    }, [selectedCountry]);
 
     const getRegionFromContinentCode = (continentCode) => {
         for (const [region, codes] of Object.entries(regionToContinentCode)) {
@@ -152,15 +134,7 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
         const countryId = shape.id;
         const continentCode = countryToContinent[countryId];
         const region = getRegionFromContinentCode(continentCode);
-        
-        console.log('Country clicked:', {
-            original: countryName,
-            normalized: normalizeCountryName(countryName),
-            id: countryId,
-            continentCode,
-            region
-        });
-        
+
         if (onCountrySelect && region && normalizeCountryName(countryName)) {
             onCountrySelect({
                 region: region,
@@ -177,25 +151,23 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
 
     useEffect(() => {
         const calculateAlphas = () => {
-            const targetData = selectedCountry ? 
+            const targetData = selectedCountry ?
                 (initialData || []).filter(d => d.level === "Country") :
                 data.filter(d => d.level === "Region");
-            
+
             if (targetData.length === 0) return {};
 
             const averages = targetData.map(item => {
                 const yearValues = Object.values(item.years);
                 const average = yearValues.reduce((sum, val) => sum + val, 0) / yearValues.length;
-                return { 
-                    name: selectedCountry ? normalizeCountryName(item.name) : item.name, 
-                    average 
+                return {
+                    name: selectedCountry ? normalizeCountryName(item.name) : item.name,
+                    average
                 };
             }).filter(item => item.name); // Filter out any null names after normalization
 
             const minAvg = Math.min(...averages.map(r => r.average));
             const maxAvg = Math.max(...averages.map(r => r.average));
-
-            console.log('Alpha scale range:', { minAvg, maxAvg, count: averages.length });
 
             const alphaScale = d3.scaleLinear()
                 .domain([minAvg, maxAvg])
@@ -204,12 +176,7 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
             const alphaMap = {};
             averages.forEach(item => {
                 alphaMap[item.name] = alphaScale(item.average);
-                console.log(`Alpha for ${item.name}:`, {
-                    alpha: alphaMap[item.name],
-                    average: item.average,
-                    isMax: item.average === maxAvg,
-                    isMin: item.average === minAvg
-                });
+
             });
 
             return alphaMap;
@@ -217,8 +184,8 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
 
         const renderMap = (svgElement, containerElement, width, height) => {
             if (!width || !worldGeoData || !svgElement || !containerElement) {
-                console.log('Missing required data:', { 
-                    width, 
+                console.log('Missing required data:', {
+                    width,
                     height,
                     hasWorldGeoData: !!worldGeoData,
                     hasSvgElement: !!svgElement,
@@ -226,9 +193,6 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
                 });
                 return;
             }
-
-            console.log('Rendering map with dimensions:', { width, height });
-            console.log('Current selection:', { selectedRegion, selectedCountry });
 
             const projection = d3
                 .geoMercator()
@@ -245,12 +209,12 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
                 .attr('viewBox', `0 0 ${width} ${height}`)
                 .attr('preserveAspectRatio', 'xMidYMid meet');
 
-            svg.selectAll("*").remove(); 
+            svg.selectAll("*").remove();
 
             svg.append('rect')
                 .attr('width', width)
                 .attr('height', height)
-                .attr('fill', '#ffffff')  
+                .attr('fill', '#ffffff')
                 .on('click', handleOceanClick);
 
             const mapGroup = svg.append('g');
@@ -259,10 +223,10 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
 
             const getCountryData = (countryName) => {
                 if (!selectedCountry) return null;
-                return (initialData || []).find(d => 
-                    d.level === "Country" && 
-                    d.name === countryName && 
-                    d.years && 
+                return (initialData || []).find(d =>
+                    d.level === "Country" &&
+                    d.name === countryName &&
+                    d.years &&
                     Object.keys(d.years).length > 0
                 );
             };
@@ -270,14 +234,14 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
             const getAlphaForCountry = (countryName, countryId) => {
                 const normalizedCountryName = normalizeCountryName(countryName);
                 if (selectedCountry) {
-                    if (!normalizedCountryName) return 0.4;  
+                    if (!normalizedCountryName) return 0.4;
                     const countryData = getCountryData(normalizedCountryName);
-                    if (!countryData) return 0.4;  
-                    return alphas[normalizedCountryName] || 0.4;  
+                    if (!countryData) return 0.4;
+                    return alphas[normalizedCountryName] || 0.4;
                 } else {
                     const continentCode = countryToContinent[countryId];
                     const region = getRegionFromContinentCode(continentCode);
-                    return alphas[region] || 0.4;  
+                    return alphas[region] || 0.4;
                 }
             };
 
@@ -298,7 +262,7 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
                     const continentCode = countryToContinent[countryId];
                     const selectedCodes = regionToContinentCode[selectedRegion] || [];
                     const region = getRegionFromContinentCode(continentCode);
-                    
+
                     let isSelected = false;
                     if (selectedCountry) {
                         const normalizedSelected = normalizeCountryName(selectedCountry);
@@ -331,17 +295,11 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
                     const countryName = shape.properties.name;
                     const continentCode = countryToContinent[countryId];
                     const selectedCodes = regionToContinentCode[selectedRegion] || [];
-                    
+
                     let isSelected = false;
                     if (selectedCountry) {
                         const normalizedSelected = normalizeCountryName(selectedCountry);
                         const normalizedCountry = normalizeCountryName(countryName);
-                        console.log('Checking selection:', {
-                            country: countryName,
-                            normalized: normalizedCountry,
-                            selected: normalizedSelected,
-                            isMatch: normalizedSelected === normalizedCountry
-                        });
                         isSelected = normalizedSelected === normalizedCountry;
                     } else if (selectedRegion) {
                         isSelected = selectedCodes.includes(continentCode);
@@ -351,7 +309,6 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
                     const alpha = getAlphaForCountry(countryName, countryId);
 
                     if (isSelected) {
-                        console.log('Drawing selected country:', countryName);
                         const path = mapGroup.append("path")
                             .datum(shape)
                             .attr("d", geoPathGenerator)
@@ -373,16 +330,15 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
                     }
                 });
 
-            console.log('Map rendering complete');
         };
 
         const addPathEventListeners = (path, shape, containerElement, isSelected, baseAlpha) => {
             path
-                .on("mouseover", function(e) {
+                .on("mouseover", function (e) {
                     d3.select(this)
                         .attr("fill-opacity", 1)
                         .attr("stroke-width", isSelected ? 1.5 : 1);
-                    
+
                     const tooltip = d3.select(containerElement)
                         .append("div")
                         .attr("class", "tooltip")
@@ -404,16 +360,16 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
                         .style("left", (x + 15) + "px")
                         .style("top", (y - 25) + "px");
                 })
-                .on("mouseout", function() {
+                .on("mouseout", function () {
                     d3.select(this)
                         .attr("fill-opacity", baseAlpha)
                         .attr("stroke-width", isSelected ? 1.5 : 0.5);
-                    
+
                     d3.select(containerElement)
                         .selectAll(".tooltip")
                         .remove();
                 })
-                .on("click", function() {
+                .on("click", function () {
                     handleCountryClick(shape);
                 });
         };
@@ -423,7 +379,6 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
             const modalContainer = modalSvgContainerRef.current;
             const modalWidth = modalContainer.clientWidth;
             const modalHeight = modalContainer.clientHeight;
-            console.log('Modal dimensions:', { modalWidth, modalHeight });
             renderMap(modalSvgRef.current, modalSvgContainerRef.current, modalWidth, modalHeight);
         }
     }, [dimensions, worldGeoData, selectedRegion, selectedCountry, data, isModalOpen]);
@@ -436,33 +391,33 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
             </div>
             <div className="card-body p-0" style={{ height: dimensions.height }}>
                 <div ref={svgContainerRef} style={{ width: '100%', height: '100%' }}>
-                    <svg 
-                        ref={svgRef} 
-                        style={{ 
+                    <svg
+                        ref={svgRef}
+                        style={{
                             width: '100%',
                             height: '100%'
                         }}
                     />
                 </div>
             </div>
-            <Modal 
+            <Modal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 title="World Map"
             >
-                <div ref={modalSvgContainerRef} style={{ 
-                    width: '100%', 
+                <div ref={modalSvgContainerRef} style={{
+                    width: '100%',
                     height: '80vh',
                     padding: 0,
                     overflow: 'hidden'
                 }}>
-                    <svg 
-                        ref={modalSvgRef} 
-                        style={{ 
-                            width: '100%', 
+                    <svg
+                        ref={modalSvgRef}
+                        style={{
+                            width: '100%',
                             height: '100%',
-                            display: 'block'  
-                        }} 
+                            display: 'block'
+                        }}
                     />
                 </div>
             </Modal>
