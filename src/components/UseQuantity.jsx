@@ -110,39 +110,41 @@ const UseQuantity = ({ data }) => {
     }, [data, dimensions, isModalOpen]);
 
     return (
-        <div className="card h-100">
-            <div className="card-header d-flex justify-content-between align-items-center">
-                <h5 className="card-title mb-0">Drug Use Quantity</h5>
-                <ExpandButton onClick={() => setIsModalOpen(true)} />
-            </div>
-            <div className="card-body p-0">
-                <div ref={containerRef} style={{ width: "100%", height: "100%" }}>
-                    <svg
-                        ref={svgRef}
-                        style={{
-                            display: "block",
-                            width: "100%",
-                            height: "100%",
-                        }}
-                    ></svg>
+        <div ref={containerRef} style={{ width: '100%', height: '100%' }}>
+            <div className="card h-100">
+                <div className="card-header d-flex justify-content-between align-items-center">
+                    <h5 className="card-title mb-0">Drug Use Quantity</h5>
+                    <ExpandButton onClick={() => setIsModalOpen(true)} />
                 </div>
-            </div>
-            <Modal
-                isOpen={isModalOpen}
-                onClose={() => setIsModalOpen(false)}
-                title="Drug Use Quantity"
-            >
-                <div style={{ width: "100%", height: "80vh" }}>
-                    <svg
-                        ref={modalSvgRef}
-                        style={{
-                            display: "block",
-                            width: "100%",
-                            height: "100%",
-                        }}
-                    ></svg>
+                <div className="card-body p-0">
+                    <div style={{ width: "100%", height: "100%" }}>
+                        <svg
+                            ref={svgRef}
+                            style={{
+                                display: "block",
+                                width: "100%",
+                                height: "100%",
+                            }}
+                        ></svg>
+                    </div>
                 </div>
-            </Modal>
+                <Modal
+                    isOpen={isModalOpen}
+                    onClose={() => setIsModalOpen(false)}
+                    title="Drug Use Quantity"
+                >
+                    <div style={{ width: "100%", height: "80vh" }}>
+                        <svg
+                            ref={modalSvgRef}
+                            style={{
+                                display: "block",
+                                width: "100%",
+                                height: "100%",
+                            }}
+                        ></svg>
+                    </div>
+                </Modal>
+            </div>
         </div>
     );
 };
