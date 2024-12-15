@@ -124,7 +124,20 @@ const UseQuantity = ({ data }) => {
                 </div>
                 <div className="card-body p-2">
                     <div style={{ width: "100%", height: "calc(100% - 8px)", position: "relative" }}>
-                        <svg ref={svgRef} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}></svg>
+                        {!data || data.length === 0 ? (
+                            <div style={{ 
+                                position: "absolute", 
+                                top: "50%", 
+                                left: "50%", 
+                                transform: "translate(-50%, -50%)",
+                                textAlign: "center",
+                                color: "#666"
+                            }}>
+                                Please select a continent to view drug use quantity data
+                            </div>
+                        ) : (
+                            <svg ref={svgRef} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%" }}></svg>
+                        )}
                     </div>
                 </div>
                 <Modal
