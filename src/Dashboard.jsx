@@ -16,7 +16,7 @@ import IDSDataFive from './data/IDS_data_2022.json';
 import Sidebar from './components/Sidebar';
 import WorldMap from './components/WorldMap';
 import Prevalence from './components/Sankey';
-import Seizure from './components/Seizure';
+import Distribution from './components/Distribution';
 import Price from './components/Price';
 import UseQuantity from './components/UseQuantity';
 
@@ -704,7 +704,7 @@ const Dashboard = () => {
             <div className='row'>
                 {/* Seizure */}
                 <div className='col-6 p-2' style={{ height: '400px' }}>
-                    <Seizure data={totalsByCountryDrugGroupAndYear} selectedCountry={filters.region.country} selectedDrugType={filters.drugs.drugGroup} onBarDataSelect={handleBarDataSelect} />
+                    <Distribution data={totalsByCountryDrugGroupAndYear} selectedCountry={filters.region.country} selectedDrugType={filters.drugs.drugGroup} onBarDataSelect={handleBarDataSelect} />
                 </div>
                 {/* Price Charts */}
                 <div className='col-6 p-2' style={{ height: '400px' }}>

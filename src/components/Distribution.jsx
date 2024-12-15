@@ -4,7 +4,7 @@ import { useDimensions } from '../hooks/useDimensions';
 import ExpandButton from './ui/ExpandButton';
 import Modal from './ui/Modal';
 
-const SeizureChart = ({ data, selectedCountry, selectedDrugType, onBarDataSelect }) => {
+const Distribution = ({ data, selectedCountry, selectedDrugType, onBarDataSelect }) => {
     const containerRef = useRef();
     const svgRef = useRef();
     const svgContainerRef = useRef();
@@ -703,4 +703,4 @@ const SeizureChart = ({ data, selectedCountry, selectedDrugType, onBarDataSelect
     );
 };
 
-export default SeizureChart;
+export default Distribution;
