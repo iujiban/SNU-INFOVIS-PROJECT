@@ -702,7 +702,7 @@ const Dashboard = () => {
                 </div>
             </div>
             <div className='row'>
-                {/* Seizure */}
+                {/* Distribution */}
                 <div className='col-6 p-2' style={{ height: '400px' }}>
                     <Distribution data={totalsByCountryDrugGroupAndYear} selectedCountry={filters.region.country} selectedDrugType={filters.drugs.drugGroup} onBarDataSelect={handleBarDataSelect} />
                 </div>

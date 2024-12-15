@@ -224,7 +224,7 @@ const Prevalence = ({ data, selectedRegion, selectedCountry }) => {
     return (
         <div className="card h-100">
             <div className="card-header d-flex justify-content-between align-items-center">
-                <h5 className="card-title mb-0">Drug Prevalence</h5>
+                <h5 className="card-title mb-0">Drug Trafficking Flow</h5>
                 <ExpandButton onClick={() => setIsModalOpen(true)} />
             </div>
             <div className="card-body p-0" style={{ flex: 1, minHeight: 0 }}>
@@ -234,7 +234,7 @@ const Prevalence = ({ data, selectedRegion, selectedCountry }) => {
                     </div>
                 </div>
             </div>
-            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Drug Prevalence">
+            <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Drug Trafficking Flow">
                 <div style={{ height: "80vh" }}>
                     <div ref={modalContainerRef1} style={{ width: "100%", height: "100%" }}>
                         <SankeyChart data={sankeyData} />
