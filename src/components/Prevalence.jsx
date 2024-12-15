@@ -59,21 +59,32 @@ const prepareSankeyData = (data) => {
 
 // SankeyChart 
 const SankeyChart = ({ data }) => {
+    const containerRef = useRef();
     const svgRef = useRef();
+    const dimensions = useDimensions(containerRef);
 
     useEffect(() => {
-        if (!data || !data.nodes || !data.links) return;
+        if (!data || !data.nodes || !data.links || !dimensions) return;
 
-        const width = 800;
-        const height = 600;
+        const margin = { top: 10, right: 30, bottom: 10, left: 30 };
+        const width = dimensions.width - margin.left - margin.right;
+        const height = dimensions.height - margin.top - margin.bottom;
 
         const svg = d3.select(svgRef.current);
-        svg.selectAll("*").remove(); // 기존 SVG 초기화
+        svg.selectAll("*").remove();
+
+        // Set SVG dimensions
+        svg.attr("width", dimensions.width)
+           .attr("height", dimensions.height);
+
+        // Create main group with margins
+        const g = svg.append("g")
+                    .attr("transform", `translate(${margin.left},${margin.top})`);
 
         // Sankey 설정
         const sankey = d3Sankey()
-            .nodeWidth(20)
-            .nodePadding(10)
+            .nodeWidth(15)
+            .nodePadding(8)
             .size([width, height]);
 
         const sankeyData = sankey({
@@ -82,7 +93,7 @@ const SankeyChart = ({ data }) => {
         });
 
         // 링크 그리기
-        svg.append("g")
+        g.append("g")
             .selectAll("path")
             .data(sankeyData.links)
             .enter()
@@ -94,7 +105,7 @@ const SankeyChart = ({ data }) => {
             .style("stroke-opacity", 0.5);
 
         // 노드 그리기
-        const node = svg.append("g")
+        const node = g.append("g")
             .selectAll("g")
             .data(sankeyData.nodes)
             .enter()
@@ -107,16 +118,23 @@ const SankeyChart = ({ data }) => {
             .attr("width", sankey.nodeWidth())
             .style("fill", "#69b3a2");
 
+        // Adjust text size based on container width
+        const fontSize = Math.max(8, Math.min(12, width / 50));
+
         node.append("text")
-            .attr("x", (d) => d.x0 - 6)
+            .attr("x", (d) => (d.x0 < width / 2 ? d.x1 + 6 : d.x0 - 6))
             .attr("y", (d) => (d.y0 + d.y1) / 2)
             .attr("dy", "0.35em")
-            .attr("text-anchor", "end")
+            .attr("text-anchor", (d) => d.x0 < width / 2 ? "start" : "end")
             .text((d) => d.name)
-            .style("font-size", "12px");
-    }, [data]);
+            .style("font-size", `${fontSize}px`);
+    }, [data, dimensions]);
 
-    return <svg ref={svgRef} width={800} height={600}></svg>;
+    return (
+        <div ref={containerRef} style={{ width: '100%', height: '100%', overflow: 'hidden' }}>
+            <svg ref={svgRef} style={{ display: 'block', width: '100%', height: '100%' }}></svg>
+        </div>
+    );
 };
 
 // Prevalence 
@@ -146,16 +164,16 @@ const Prevalence = ({ data, selectedRegion, selectedCountry }) => {
                 <h5 className="card-title mb-0">Drug Prevalence</h5>
                 <ExpandButton onClick={() => setIsModalOpen(true)} />
             </div>
-            <div className="card-body p-0">
-                <div style={{ display: "flex", justifyContent: "space-around", height: "100%" }}>
-                    <div ref={containerRef1} style={{ flex: 1 }}>
+            <div className="card-body p-0" style={{ flex: 1, minHeight: 0 }}>
+                <div style={{ height: "100%", padding: "10px" }}>
+                    <div ref={containerRef1} style={{ width: "100%", height: "100%" }}>
                         <SankeyChart data={sankeyData} />
                     </div>
                 </div>
             </div>
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Drug Prevalence">
-                <div style={{ display: "flex", justifyContent: "space-around", height: "80vh" }}>
-                    <div ref={modalContainerRef1} style={{ flex: 1 }}>
+                <div style={{ height: "80vh" }}>
+                    <div ref={modalContainerRef1} style={{ width: "100%", height: "100%" }}>
                         <SankeyChart data={sankeyData} />
                     </div>
                 </div>
