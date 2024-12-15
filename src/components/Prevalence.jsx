@@ -10,6 +10,7 @@ const prepareSankeyData = (data) => {
     const nodes = [];
     const links = [];
     const nodeMap = new Map(); // 노드 중복 방지
+    const linkMap = new Map(); // 링크 중복 방지
 
     const addNode = (name) => {
         if (!nodeMap.has(name)) {
@@ -17,6 +18,23 @@ const prepareSankeyData = (data) => {
             nodes.push({ name });
         }
         return nodeMap.get(name);
+    };
+
+    const addLink = (source, target, value) => {
+        const linkKey = `${source}-${target}`;
+        if (linkMap.has(linkKey)) {
+            // If link exists, add to its value
+            const existingLink = links[linkMap.get(linkKey)];
+            existingLink.value += value;
+        } else {
+            // If link doesn't exist, create new one
+            linkMap.set(linkKey, links.length);
+            links.push({
+                source,
+                target,
+                value: value || 1,
+            });
+        }
     };
 
     // 데이터 순회: drugGroup → traffickingCategory → seizuredLocation
@@ -30,18 +48,10 @@ const prepareSankeyData = (data) => {
         const locationNode = addNode(seizuredLocation);
 
         // drugGroup → traffickingCategory
-        links.push({
-            source: drugNode,
-            target: transportNode,
-            value: total || 1,
-        });
+        addLink(drugNode, transportNode, total || 1);
 
         // traffickingCategory → seizuredLocation
-        links.push({
-            source: transportNode,
-            target: locationNode,
-            value: total || 1,
-        });
+        addLink(transportNode, locationNode, total || 1);
     });
 
     return { nodes, links };
@@ -141,17 +151,11 @@ const Prevalence = ({ data, selectedRegion, selectedCountry }) => {
                     <div ref={containerRef1} style={{ flex: 1 }}>
                         <SankeyChart data={sankeyData} />
                     </div>
-                    <div ref={containerRef2} style={{ flex: 1 }}>
-                        <SankeyChart data={sankeyData} />
-                    </div>
                 </div>
             </div>
             <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title="Drug Prevalence">
                 <div style={{ display: "flex", justifyContent: "space-around", height: "80vh" }}>
                     <div ref={modalContainerRef1} style={{ flex: 1 }}>
-                        <SankeyChart data={sankeyData} />
-                    </div>
-                    <div ref={modalContainerRef2} style={{ flex: 1 }}>
                         <SankeyChart data={sankeyData} />
                     </div>
                 </div>
