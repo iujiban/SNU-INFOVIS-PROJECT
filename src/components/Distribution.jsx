@@ -4,7 +4,7 @@ import { useDimensions } from '../hooks/useDimensions';
 import ExpandButton from './ui/ExpandButton';
 import Modal from './ui/Modal';
 
-const Distribution = ({ data, selectedCountry, selectedDrugType, onBarDataSelect }) => {
+const Distribution = ({ data, selectedRegion, selectedCountry, selectedDrugType, onBarDataSelect }) => {
     const containerRef = useRef();
     const svgRef = useRef();
     const svgContainerRef = useRef();
@@ -15,6 +15,7 @@ const Distribution = ({ data, selectedCountry, selectedDrugType, onBarDataSelect
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedBarData, setSelectedBarData] = useState(null);
     const [lookupMap, setLookupMap] = useState(new Map()); // Initialize the lookup map
+    const [lookupBarMap, setlookupBarMap] = useState(new Map());
 
     const customColors = (selectedDrugType) => {
         const colors = {
@@ -41,7 +42,18 @@ const Distribution = ({ data, selectedCountry, selectedDrugType, onBarDataSelect
 
         return colorMap;
     };
+
     const handleBarClick = (msCode, drugValue) => {
+
+        if (selectedBarData) {
+            console.log("selectedData already exists", selectedBarData);
+
+            if (onBarDataSelect) {
+                onBarDataSelect(selectedBarData);
+            }
+            return;
+        }
+
         if (!lookupMap || !lookupMap.has(msCode)) {
             console.warn(`No data found for msCode: ${msCode}`);
             return;
@@ -49,12 +61,12 @@ const Distribution = ({ data, selectedCountry, selectedDrugType, onBarDataSelect
 
         // Retrieve the data for the clicked bar
         const entry = lookupMap.get(msCode);
-
+        console.log("entry", entry);
         // Find the drug group matching the drugValue
         const drugGroup = Object.entries(entry).find(
             ([key, value]) => key !== 'msCode' && key !== 'country' && value === drugValue
         );
-
+        console.log("handleBarClick1", drugGroup);
         if (drugGroup) {
             setSelectedBarData({
                 msCode,
@@ -69,6 +81,7 @@ const Distribution = ({ data, selectedCountry, selectedDrugType, onBarDataSelect
             onBarDataSelect(selectedBarData)
         }
     };
+
 
 
     // Process data for Stacked Bar Chart
@@ -282,6 +295,7 @@ const Distribution = ({ data, selectedCountry, selectedDrugType, onBarDataSelect
                         .style("font-weight", "normal")
                         .style("fill", "black");
                 }
+                setSelectedBarData(null);
             })
             .on('click', function (event, d) {
                 const msCode = d.data.msCode;
@@ -555,17 +569,35 @@ const Distribution = ({ data, selectedCountry, selectedDrugType, onBarDataSelect
             d3.select(this)
                 .attr('stroke', '#000')
                 .attr('stroke-width', 2);
-            setSelectedBarData({
-                drugGroup: d.name,
-                percentage: d.value.toFixed(1)
-            });
         })
             .on('mouseout', function () {
                 d3.select(this)
                     .attr('stroke', '#fff')
                     .attr('stroke-width', 1);
-                setSelectedBarData(null);
+            }).on('click', function (event, d) {
+                const drugGroup = d.name;
+                const drugValue = d.value; // Height of the bar
+                d3.selectAll('rect').attr('stroke', null); // Reset all strokes
+                d3.select(this)
+                    .attr('stroke', 'black')
+                    .attr('stroke-width', 2);
+                setSelectedBarData({
+                    drugGroup: d.name,
+                    percentage: d.value.toFixed(1)
+                });
+                handleBarClick(drugGroup, drugValue);
+            }).on('contextmenu', function (event, d) {
+                event.preventDefault(); // Prevent the default context menu
+
+                const name = d.name;
+                if (selectedBarData && selectedBarData.name === name) {
+                    // Deselect if the bar is right-clicked
+                    setSelectedBarData(null);
+                }
+                // Remove highlight
+                d3.select(this).attr('stroke', null);
             });
+
     };
 
     // Helper function to wrap text
@@ -607,6 +639,11 @@ const Distribution = ({ data, selectedCountry, selectedDrugType, onBarDataSelect
             processedData.forEach((entry) => map.set(entry.msCode, entry));
             setLookupMap(map);
         };
+        const updateLookupBar = (processedData) => {
+            const map = new Map();
+            processedData.forEach((entry) => map.set(entry.name, entry));
+            setlookupBarMap(map);
+        }
 
 
         if (selectedCountry) {
@@ -616,8 +653,10 @@ const Distribution = ({ data, selectedCountry, selectedDrugType, onBarDataSelect
 
             const colorMap = customColors(null);
             createBarChart(processedData, colorMap, svgRef);
+            updateLookupBar(processedData);
             if (isModalOpen) {
                 createBarChart(processedData, colorMap, modalSvgRef);
+                updateLookupBar(processedData);
             }
         } else {
             const processedData = processDataForStackedBar(data);
@@ -670,11 +709,14 @@ const Distribution = ({ data, selectedCountry, selectedDrugType, onBarDataSelect
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                title={selectedCountry
-                    ? `Drug Distribution in ${selectedCountry}`
-                    : selectedDrugType
-                        ? `Drug Types in ${selectedDrugType}`
-                        : 'Drug Distribution'}
+                title={
+                    selectedRegion
+                        ? `Drug Distribution in ${selectedRegion}`
+                        : selectedCountry
+                            ? `Drug Distribution in ${selectedCountry}`
+                            : selectedDrugType
+                                ? `Drug Types in ${selectedDrugType}`
+                                : 'Drug Distribution'}
             >
                 <div className="card h-100">
                     <div className="card-body p-0 d-flex flex-column" style={{ height: '80vh', overflow: 'hidden' }}>

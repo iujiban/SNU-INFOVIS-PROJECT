@@ -28,7 +28,7 @@ const prepareSankeyData = (data) => {
 
     const addLink = (source, target, value) => {
         if (source === -1 || target === -1) return; // Skip invalid nodes
-        
+
         const linkKey = `${source}-${target}`;
         if (linkMap.has(linkKey)) {
             const existingLink = links[linkMap.get(linkKey)];
@@ -45,7 +45,7 @@ const prepareSankeyData = (data) => {
 
     data.forEach((item) => {
         const { drugGroup, traffickingCategory, seizuredLocation, total } = item;
-        
+
         const drugNode = addNode(drugGroup);
         const transportNode = addNode(traffickingCategory);
         const locationNode = addNode(seizuredLocation);
@@ -53,7 +53,7 @@ const prepareSankeyData = (data) => {
         if (drugNode !== -1 && transportNode !== -1) {
             addLink(drugNode, transportNode, total || 1);
         }
-        
+
         if (transportNode !== -1 && locationNode !== -1) {
             addLink(transportNode, locationNode, total || 1);
         }
@@ -101,7 +101,7 @@ const SankeyChart = ({ data }) => {
         svg.selectAll("*").remove();
 
         svg.attr("width", dimensions.width)
-           .attr("height", dimensions.height);
+            .attr("height", dimensions.height);
 
         const g = svg.append("g")
             .attr("transform", `translate(${margin.left},${margin.top})`);
@@ -206,12 +206,12 @@ const Prevalence = ({ data, selectedRegion, selectedCountry }) => {
         if (!item || typeof item !== 'object') return false;
         if (selectedRegion && (!item.region || item.region !== selectedRegion)) return false;
         if (selectedCountry && (!item.country || item.country !== selectedCountry)) return false;
-        
+
         // Ensure all required fields are present
-        return item.drugGroup && 
-               item.traffickingCategory && 
-               item.seizuredLocation && 
-               item.total !== undefined;
+        return item.drugGroup &&
+            item.traffickingCategory &&
+            item.seizuredLocation &&
+            item.total !== undefined;
     });
 
     // If no data after filtering, return early with a message
@@ -231,7 +231,7 @@ const Prevalence = ({ data, selectedRegion, selectedCountry }) => {
     const sankeyData = prepareSankeyData(filteredData);
 
     // Verify sankeyData structure
-    if (!sankeyData || !sankeyData.nodes || !sankeyData.links || 
+    if (!sankeyData || !sankeyData.nodes || !sankeyData.links ||
         sankeyData.nodes.length === 0 || sankeyData.links.length === 0) {
         return (
             <div className="card h-100">

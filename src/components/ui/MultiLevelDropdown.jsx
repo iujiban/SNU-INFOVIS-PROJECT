@@ -20,7 +20,6 @@ const MultiLevelDropdown = ({ label, options, levels, onChange, value }) => {
 
         levels.forEach((level, index) => {
             const key = level.toLowerCase(); // 소문자로 변환하여 일치시킴
-            console.log(`현재 레벨: ${level}, 키: ${key}`);
 
             if (index === 0) {
                 newFilteredOptions[level] = Array.from(
@@ -37,10 +36,6 @@ const MultiLevelDropdown = ({ label, options, levels, onChange, value }) => {
                 ).filter(Boolean).sort();
             }
         });
-        console.log("options[0]:", options[0]);
-        console.log("options:", options);
-        console.log("levels:", levels);
-        console.log("Filtered Options:", newFilteredOptions);
         setFilteredOptions(newFilteredOptions);
     }, [options, levels, selections]);
 

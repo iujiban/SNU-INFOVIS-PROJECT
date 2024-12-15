@@ -139,9 +139,7 @@ const Sidebar = ({ onFilterChange, selectedRegion, selectedCountry }) => {
         if (yearOptions.minYear !== yearStatic.minYear || yearOptions.maxYear !== yearStatic.maxYear) {
             setYearStatic({ minYear: yearOptions.minYear, maxYear: yearOptions.maxYear });
         }
-        console.log("filteredData", filteredData);
-        console.log("selectedMode", selectedMode);
-        console.log("regionOptions", regionOptions);
+
     }, [yearOptions, yearRange, selectedMode, filteredData, regionOptions]);
 
     return (

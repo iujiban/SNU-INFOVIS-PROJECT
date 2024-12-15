@@ -72,6 +72,7 @@ const Dashboard = () => {
     };
 
     const [selectedBarData, setSelectedBarData] = useState(null);
+
     const handleBarDataSelect = (data) => {
         setSelectedBarData(data);
     }
@@ -174,9 +175,6 @@ const Dashboard = () => {
         return resultArray;
     }, [idsDataFilteredData, filters.year]);
 
-    useEffect(() => {
-        console.log("Filtered Data with Totals:", totalsByRegionHierarchy);
-    }, [totalsByRegionHierarchy]);
 
     const yearlyIDSTotals = useMemo(() => {
         if (!idsDataFilteredData || idsDataFilteredData.length === 0) return [];
@@ -221,34 +219,6 @@ const Dashboard = () => {
         });
     };
 
-    // Filtered PrevalanceNPS Data
-    const filteredPrevalenceData = useMemo(() => {
-        if (!PrevalenceNPSdata || PrevalenceNPSdata.length === 0) return [];
-
-        return PrevalenceNPSdata.filter((item) => {
-            const year = Number(item.Year); // Ensure 'Year' is a number
-            const country = item["Country/Territory"];
-            const drugGroup = item["Drug group"];
-            const subRegion = item["Sub-region"];
-            const bestValue = parseFloat(item.Best) || 0; // Parse 'Best' as a float
-            const male = item.Male;
-            const female = item.Female;
-            const age = item.Age;
-
-            return (
-                year >= filters.year[0] && // Check if year is within range
-                year <= filters.year[1] &&
-                (filters.region ? country === filters.region : true) && // Filter by region if specified
-                (filters.subRegion ? subRegion === filters.subRegion : true) && // Filter by sub-region
-                (filters.drugs.length > 0 ? filters.drugs.includes(drugGroup) : true) && // Filter by drug group if specified
-                (filters.bestRange ? bestValue >= filters.bestRange[0] && bestValue <= filters.bestRange[1] : true) && // Filter by Best value range
-                (filters.male ? male === filters.male : true) && // Filter by Male value
-                (filters.female ? female === filters.female : true) && // Filter by Female value
-                (filters.age ? age === filters.age : true) // Filter by Age
-            );
-        });
-    }, [filters]); // Recalculate when filters change
-
     const FilteredPriceData = useMemo(() => {
         if (!PriceData || PriceData.length === 0) return [];
 
@@ -274,11 +244,51 @@ const Dashboard = () => {
         });
     }, [filters]); // Recalculate when filters change
 
+    const stackdrugBarFilteredData = useMemo(() => {
+        // Ensure Drugdata and selectedBarData are valid
+        if (!Drugdata || Drugdata.length === 0) {
+            console.log("Drugdata is empty or undefined.");
+            return [];
+        }
+        if (!selectedBarData || !selectedBarData.drugGroup) {
+            console.log("No valid selectedBarData provided.");
+            return [];
+        }
+        const selectedCountry = filters.region?.country;
+        console.log("Selected Country:", selectedCountry);
+
+        // Filter the data to match `msCode`, `Drug group`, and restrict by `Year range`
+        const filteredData = Drugdata.filter((item) => {
+            const year = Number(item.Year); // Ensure Year is a valid number
+            const matchesDrugGroup = item["Drug group"] === selectedBarData.drugGroup;
+            const matchesCountry = selectedCountry
+                ? item["Country/Territory"] === selectedCountry
+                : true;
+            const inYearRange =
+                filters?.year?.length === 2
+                    ? year >= filters.year[0] && year <= filters.year[1]
+                    : true; // Default: pass if year filter is missing
+
+            // Debugging each condition
+            console.log(
+                `Item: ${item["Drug group"]}, Year: ${year}, Country: ${item["Country/Territory"]}`
+            );
+            console.log(
+                `Conditions: matchesDrugGroup=${matchesDrugGroup}, matchesCountry=${matchesCountry}, inYearRange=${inYearRange}`
+            );
+
+            return matchesDrugGroup && matchesCountry && inYearRange;
+        });
+
+        console.log("Filtered Data:", filteredData);
+        return filteredData;
+    }, [Drugdata, selectedBarData, filters.year, filters.region]);
+
+
 
     // Filtered Seizure BarSelect Data (Step 1)
     const drugBarFilteredData = useMemo(() => {
-        console.log("SelectedBarDATA:", selectedBarData);
-
+        console.log("filters.region.region", filters.region.region)
         // Ensure Drugdata and selectedBarData are valid
         if (!Drugdata || Drugdata.length === 0) {
             console.log("Drugdata is empty or undefined.");
@@ -291,23 +301,36 @@ const Dashboard = () => {
 
         // Filter the data to match `msCode`, `Drug group`, and restrict by `Year range`
         const filteredData = Drugdata.filter((item) => {
+            console.log("filters.region.region2", filters.region.region)
             const year = Number(item.Year); // Ensure Year is a valid number
             const matchesDrugs = item["Drug group"] === selectedBarData.drugGroup; // Check Drug group match
-            const matchesmsCode = item["msCode"] === selectedBarData.msCode; // Check msCode match
+            const matchesmsCode = item["msCode"] === selectedBarData.msCode;
             const inYearRange = year >= filters.year[0] && year <= filters.year[1]; // Check Year range
 
             // All conditions must be true for the item to pass
             return matchesDrugs && matchesmsCode && inYearRange;
         });
 
-        console.log("Filtered DrugBar Data:", filteredData);
         return filteredData;
     }, [Drugdata, selectedBarData, filters.year]);
 
     // Filterering (Step 2)
     const yearlyTotals = useMemo(() => {
-        // Ensure filtered data is valid
-        if (!drugBarFilteredData || drugBarFilteredData.length === 0) {
+        // stackdrugBarFilteredData와 drugBarFilteredData 디버깅
+        console.log("stackdrugBarFilteredData:", stackdrugBarFilteredData);
+        console.log("drugBarFilteredData:", drugBarFilteredData);
+
+        // combinedData 확인
+        const combinedData = (stackdrugBarFilteredData?.length > 0)
+            ? stackdrugBarFilteredData
+            : (drugBarFilteredData?.length > 0)
+                ? drugBarFilteredData
+                : [];
+
+        console.log("combinedData:", combinedData);
+
+        // Ensure combined data is valid
+        if (!combinedData || combinedData.length === 0) {
             console.log("No data available for yearly totals.");
             return [];
         }
@@ -321,10 +344,10 @@ const Dashboard = () => {
             2022: 0,
         };
 
-        // Loop through filtered data and accumulate totals for each year
-        drugBarFilteredData.forEach((item) => {
+        // Loop through combined data and accumulate totals for each year
+        combinedData.forEach((item) => {
             const year = Number(item.Year);
-            const weight = parseFloat(item.Kilograms) || 0; // Assume weight is stored in "Kilograms"
+            const weight = parseFloat(item.Kilograms) || 0;
 
             // Add the weight to the corresponding year
             if (yearTotalsMap.hasOwnProperty(year)) {
@@ -340,7 +363,8 @@ const Dashboard = () => {
 
         console.log("Yearly Totals:", result);
         return result;
-    }, [drugBarFilteredData]);
+    }, [drugBarFilteredData, stackdrugBarFilteredData]);
+
 
     // Filtered Seizure Data
     const drugSeziureFilteredData = useMemo(() => {
@@ -363,88 +387,6 @@ const Dashboard = () => {
             );
         });
     }, [filters]);
-    /*
-        // TimeBased IDS_DATA Totals by Country and Year
-        const IDSDataGroupedByRegion = useMemo(() => {
-            if (!idsDataFilteredData || idsDataFilteredData.length === 0) {
-                console.warn("No filtered IDS data found");
-                return [];
-            }
-    
-            const groupedData = {};
-    
-            idsDataFilteredData.forEach((item) => {
-                const {
-                    Region: region,
-                    SubRegion: subRegion,
-                    'Country/Territory': country,
-                    Year: year,
-                    Date: date,
-                    DrugGroup: drugGroup,
-                    Q2: quantity,
-                    U2: unit,
-                } = item;
-    
-                const parsedYear = Number(year);
-                const parsedQuantity = parseFloat(quantity) || 0;
-    
-                // Skip invalid or zero values
-                if (!region || !subRegion || !country || !drugGroup || parsedQuantity <= 0) return;
-    
-                // Create a unique key for Region + SubRegion + Country + DrugGroup
-                const key = `${region}-${subRegion}-${country}-${drugGroup}`;
-    
-                if (!groupedData[key]) {
-                    groupedData[key] = {
-                        region,
-                        subRegion,
-                        country,
-                        drugGroup,
-                        total: 0,
-                        years: {}, // Store quantities by year
-                    };
-                }
-    
-                // Initialize the year if not already present
-                if (!groupedData[key].years[parsedYear]) {
-                    groupedData[key].years[parsedYear] = {
-                        year: parsedYear,
-                        total: 0,
-                        dates: {}, // Store quantities by date
-                    };
-                }
-    
-                // Parse the date (if available)
-                const parsedDate = date ? new Date(date).toISOString().split("T")[0] : null;
-    
-                // Aggregate total quantity at the year level
-                groupedData[key].years[parsedYear].total += parsedQuantity;
-    
-                // Aggregate total quantity at the date level (if date exists)
-                if (parsedDate) {
-                    if (!groupedData[key].years[parsedYear].dates[parsedDate]) {
-                        groupedData[key].years[parsedYear].dates[parsedDate] = 0;
-                    }
-                    groupedData[key].years[parsedYear].dates[parsedDate] += parsedQuantity;
-                }
-    
-                // Update overall total
-                groupedData[key].total += parsedQuantity;
-            });
-    
-            // Convert grouped data to an array format for visualization
-            return Object.values(groupedData).map((group) => ({
-                ...group,
-                years: Object.values(group.years).map((yearData) => ({
-                    ...yearData,
-                    dates: Object.entries(yearData.dates).map(([date, quantity]) => ({
-                        date,
-                        quantity,
-                    })),
-                })),
-            }));
-        }, [idsDataFilteredData]);
-    */
     // Map Processed Totals by Country and Year
     const totalsByCountryAndYearForArray = useMemo(() => {
         if (!drugSeziureFilteredData || drugSeziureFilteredData.length === 0) {
@@ -550,7 +492,6 @@ const Dashboard = () => {
             });
         });
 
-        console.log('Flattened Array:', resultArray); // Debugging output
         return resultArray;
     }, [drugSeziureFilteredData]);
 
@@ -650,22 +591,22 @@ const Dashboard = () => {
 
     }, [filters.mode]);
 
-    useEffect(() => {
-        console.log('Dashboard filters updated:', filters);
-    }, [filters]);
 
     // Debug
     useEffect(() => {
+        console.log('selectedBarData', selectedBarData);
+        console.log('stackdrugBarFilteredData', stackdrugBarFilteredData)
         // console.log('Prevalence Data: ', filteredPrevalenceData);
         // console.log('Filters updated:', filters);
         // console.log('Selected Country in Dashboard:', filters.region?.country);
-        console.log('Filteres DrugSeziure Data: ', drugSeziureFilteredData);
-        // console.log('Processed Seizure Data:', totalsByCountryDrugGroupAndYear);
-        console.log('selection', selectedBarData);
-        console.log('selectionFiltered', drugBarFilteredData);
+        // console.log('Filteres DrugSeziure Data: ', drugSeziureFilteredData);
+        console.log('selectedBar Dashboard', selectedBarData);
+        console.log('Processed Seizure Data:', totalsByCountryDrugGroupAndYear);
+        // console.log('selection', selectedBarData);
+        // console.log('selectionFiltered', drugBarFilteredData);
         console.log('yearlyTotals', yearlyTotals);
-        console.log('Filter Map', filteredMapData);
-        console.log('totalsByCountryAndYearForMap', totalsByCountryAndYearForArray);
+        // console.log('Filter Map', filteredMapData);
+        // console.log('totalsByCountryAndYearForMap', totalsByCountryAndYearForArray);
     }, [filters, totalsByCountryDrugGroupAndYear, selectedBarData, drugBarFilteredData, yearlyTotals]);
 
     // UI 렌더링
@@ -704,7 +645,7 @@ const Dashboard = () => {
             <div className='row'>
                 {/* Distribution */}
                 <div className='col-6 p-2' style={{ height: '400px' }}>
-                    <Distribution data={totalsByCountryDrugGroupAndYear} selectedCountry={filters.region.country} selectedDrugType={filters.drugs.drugGroup} onBarDataSelect={handleBarDataSelect} />
+                    <Distribution data={totalsByCountryDrugGroupAndYear} selectedRegion={filters.region.region} selectedCountry={filters.region.country} selectedDrugType={filters.drugs.drugGroup} onBarDataSelect={handleBarDataSelect} />
                 </div>
                 {/* Price Charts */}
                 <div className='col-6 p-2' style={{ height: '400px' }}>
