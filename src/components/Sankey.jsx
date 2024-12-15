@@ -16,10 +16,10 @@ const prepareSankeyData = (data) => {
         if (!nodeMap.has(name)) {
             nodeMap.set(name, nodes.length);
             nodes.push({ name });
+            console.log(`Added node: ${name} at index ${nodes.length - 1}`);
         }
         return nodeMap.get(name);
     };
-
     const addLink = (source, target, value) => {
         const linkKey = `${source}-${target}`;
         if (linkMap.has(linkKey)) {
@@ -87,11 +87,11 @@ const SankeyChart = ({ data }) => {
 
         // Set SVG dimensions
         svg.attr("width", dimensions.width)
-           .attr("height", dimensions.height);
+            .attr("height", dimensions.height);
 
         // Create main group with margins
         const g = svg.append("g")
-                    .attr("transform", `translate(${margin.left},${margin.top})`);
+            .attr("transform", `translate(${margin.left},${margin.top})`);
 
         // Pre-calculate node values and create Sankey layout
         const nodes = data.nodes.map(d => ({ ...d }));
@@ -122,14 +122,14 @@ const SankeyChart = ({ data }) => {
                         }
                         return sum;
                     }, 0);
-                    
+
                     const valueB = links.reduce((sum, link) => {
                         if (link.source === b || link.target === b) {
                             return sum + (link.value || 1);
                         }
                         return sum;
                     }, 0);
-                    
+
                     return valueB - valueA;  // Sort in descending order
                 }
                 return 0;  // Maintain original depth order

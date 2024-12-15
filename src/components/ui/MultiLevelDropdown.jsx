@@ -19,29 +19,31 @@ const MultiLevelDropdown = ({ label, options, levels, onChange, value }) => {
         const newFilteredOptions = {};
 
         levels.forEach((level, index) => {
+            const key = level.toLowerCase(); // 소문자로 변환하여 일치시킴
+            console.log(`현재 레벨: ${level}, 키: ${key}`);
+
             if (index === 0) {
-                // First level shows unique values
-                newFilteredOptions[level] = [...new Set(options.map(opt => opt[level]))].filter(Boolean).sort();
+                newFilteredOptions[level] = Array.from(
+                    new Set(options.map(opt => opt[key]))
+                ).filter(Boolean).sort();
             } else {
-                // Other levels are filtered based on previous selections
                 const filtered = options.filter(opt => {
                     return Object.entries(selections)
                         .filter(([key]) => levels.indexOf(key) < index)
-                        .every(([key, value]) => opt[key] === value);
+                        .every(([key, value]) => opt[key.toLowerCase()] === value);
                 });
-                newFilteredOptions[level] = [...new Set(filtered.map(opt => opt[level]))].filter(Boolean).sort();
-
-                // If we have a selection for this level but it's not in the filtered options,
-                // add it to ensure it's available for selection
-                if (selections[level] && !newFilteredOptions[level].includes(selections[level])) {
-                    newFilteredOptions[level].push(selections[level]);
-                    newFilteredOptions[level].sort();
-                }
+                newFilteredOptions[level] = Array.from(
+                    new Set(filtered.map(opt => opt[key]))
+                ).filter(Boolean).sort();
             }
         });
-
+        console.log("options[0]:", options[0]);
+        console.log("options:", options);
+        console.log("levels:", levels);
+        console.log("Filtered Options:", newFilteredOptions);
         setFilteredOptions(newFilteredOptions);
     }, [options, levels, selections]);
+
 
     const handleChange = (level, value) => {
         const levelIndex = levels.indexOf(level);
@@ -58,6 +60,7 @@ const MultiLevelDropdown = ({ label, options, levels, onChange, value }) => {
         setSelections(newSelections);
         onChange(newSelections);
     };
+
 
     return (
         <div className="card">

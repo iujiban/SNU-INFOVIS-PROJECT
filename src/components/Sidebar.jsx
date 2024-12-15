@@ -10,38 +10,19 @@ import Prevalence from '../data/Prevalence_of_drug_use_NPS_General.json';
 import NonNPSPrevalence from '../data/Prevalence_of_drug_use_NonNPS_General.json'
 import Price from '../data/Prices_of_drugs.json'
 
-const modeOptions = [
-    { value: 'prevalence', label: 'Prevalence' },
-    { value: 'seizure', label: 'Seizure' },
-    { value: 'price', label: 'Price' },
-];
-
-const genderOptions = [
-    { value: 'all', label: 'All' },
-    { value: 'male', label: 'Male' },
-    { value: 'female', label: 'Female' },
-];
-
-const ageOptions = [
-    { value: 'all', label: 'All' },
-    { value: 'youth', label: 'Youth' },
-];
-
 
 const yearMin = 2018;
 const yearMax = 2022;
 
 const Sidebar = ({ onFilterChange, selectedRegion, selectedCountry }) => {
     const [yearStatic, setYearStatic] = useState({ minYear: 2018, maxYear: 2022 });
-    const [selectedMode, setSelectedMode] = useState(null);
+    const [selectedMode, setSelectedMode] = useState({ value: 'seizure', label: 'Seziure' });
     const [yearRange, setYearRange] = useState({ minYear: yearMin, maxYear: yearMax });
     // const [selectedCountry, setSelectedCountry] = useState(null);
 
 
     const dataMap = {
-        seizure: Seziure,
-        prevalence: [...Prevalence, ...NonNPSPrevalence],
-        price: Price,
+        seizure: Seziure
     }
 
     const handleModeChange = (selectedModes) => {
@@ -56,56 +37,24 @@ const Sidebar = ({ onFilterChange, selectedRegion, selectedCountry }) => {
         ? dataMap[selectedMode.value]
         : null;
     */
-    const filteredData = useMemo(() => {
-        if (!selectedMode || !Array.isArray(selectedMode)) return null;
 
-        // Flatten the array of data for selected modes
-        return selectedMode.flatMap((mode) => dataMap[mode] || []);
+    const filteredData = useMemo(() => {
+        if (!selectedMode || !selectedMode.value) return [];
+        return dataMap[selectedMode.value] || [];
     }, [selectedMode]);
 
     const regionOptions = useMemo(() => {
-        // Create a base set of region options that always exist
-        const baseRegions = [
-            { Region: 'Europe', Country: 'Russia' },
-            { Region: 'Europe', Country: 'France' },
-            { Region: 'Europe', Country: 'Germany' },
-            { Region: 'Asia', Country: 'China' },
-            { Region: 'Asia', Country: 'Japan' },
-            { Region: 'Asia', Country: 'India' },
-            { Region: 'Africa', Country: 'South Africa' },
-            { Region: 'Africa', Country: 'Egypt' },
-            { Region: 'Africa', Country: 'Nigeria' },
-            { Region: 'Americas', Country: 'United States' },
-            { Region: 'Americas', Country: 'Canada' },
-            { Region: 'Americas', Country: 'Brazil' },
-            { Region: 'Oceania', Country: 'Australia' },
-            { Region: 'Oceania', Country: 'New Zealand' }
-        ];
-
         if (!filteredData || filteredData.length === 0) {
-            console.log('Using base region options');
-            return baseRegions;
+            return [];
         }
-
         const uniqueRegions = new Map();
-
-        // Add base regions first
-        baseRegions.forEach(option => {
-            const key = `${option.Region}-${option.Country}`;
-            uniqueRegions.set(key, option);
-        });
-
-        // Then add any additional regions from the data
         filteredData.forEach((item) => {
-            const { Region, 'Country/Territory': Country } = item;
-            if (Region && Country) {
-                const key = `${Region}-${Country}`;
-                uniqueRegions.set(key, { Region, Country });
+            const { Region, 'Country/Territory': CountryTerritory } = item;
+            if (Region && CountryTerritory) {
+                uniqueRegions.set(`${Region}-${CountryTerritory}`, { region: Region, country: CountryTerritory });
             }
         });
-
-        const result = Array.from(uniqueRegions.values());
-        return result;
+        return Array.from(uniqueRegions.values());
     }, [filteredData]);
 
 
@@ -190,7 +139,10 @@ const Sidebar = ({ onFilterChange, selectedRegion, selectedCountry }) => {
         if (yearOptions.minYear !== yearStatic.minYear || yearOptions.maxYear !== yearStatic.maxYear) {
             setYearStatic({ minYear: yearOptions.minYear, maxYear: yearOptions.maxYear });
         }
-    }, [yearOptions, yearRange]);
+        console.log("filteredData", filteredData);
+        console.log("selectedMode", selectedMode);
+        console.log("regionOptions", regionOptions);
+    }, [yearOptions, yearRange, selectedMode, filteredData, regionOptions]);
 
     return (
         <div className='row'>
