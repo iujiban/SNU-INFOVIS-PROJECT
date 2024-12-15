@@ -64,9 +64,9 @@ const MultiLevelDropdown = ({ label, options, levels, onChange, value }) => {
 
     return (
         <div className="card m-2">
-            <div className="card-body">
-                <h6 className="form-label">{label}</h6>
-                <div className="d-flex flex-column gap-2">
+            <div className="card-body d-flex flex-row gap-2 align-items-center">
+                <h6 className="form-label mb-0">{label}</h6>
+                <div className="d-flex flex-row gap-2 flex-grow-1">
                     {levels.map((level, index) => (
                         <select
                             key={level}

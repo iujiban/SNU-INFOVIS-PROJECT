@@ -550,16 +550,14 @@ const Dashboard = () => {
                     </div>
                 </nav>
             </div>
+            {/* Options */}
+            <Sidebar
+                onFilterChange={handleFilterChange}
+                selectedRegion={filters.region.region}
+                selectedCountry={filters.region.country}
+            />
+            {/* Main Content */}
             <div className='row'>
-                {/* Sidebar */}
-                <div className='col-2 p-2'>
-                    <Sidebar
-                        onFilterChange={handleFilterChange}
-                        selectedRegion={filters.region.region}
-                        selectedCountry={filters.region.country}
-                    />
-                </div>
-                {/* Main Content */}
                 <div className='col-10 p-2'>
                     <div className='row'>
                         {/* Map */}

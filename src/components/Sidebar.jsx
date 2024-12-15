@@ -193,24 +193,28 @@ const Sidebar = ({ onFilterChange, selectedRegion, selectedCountry }) => {
     }, [yearOptions, yearRange]);
 
     return (
-        <div className="sidebar">
-            <MultiLevelDropdown
-                label="Region"
-                options={regionOptions}
-                levels={['Region', 'Country']}
-                onChange={handleRegionChange}
-                value={selectedRegion || selectedCountry ? {
-                    Region: selectedRegion,
-                    Country: selectedCountry
-                } : null}
-            />
-            <Range
-                min={yearStatic.minYear}
-                max={yearStatic.maxYear}
-                step={1}
-                name="Year"
-                onChange={handleYearChange}
-            />
+        <div className='row'>
+            <div className="col-8 p-2">
+                <MultiLevelDropdown
+                    label="Region"
+                    options={regionOptions}
+                    levels={['Region', 'Country']}
+                    onChange={handleRegionChange}
+                    value={selectedRegion || selectedCountry ? {
+                        Region: selectedRegion,
+                        Country: selectedCountry
+                    } : null}
+                />
+            </div>
+            <div className="col-4 p-2">
+                <Range
+                    min={yearStatic.minYear}
+                    max={yearStatic.maxYear}
+                    step={1}
+                    name="Year"
+                    onChange={handleYearChange}
+                />
+            </div>
         </div>
     )
 }
