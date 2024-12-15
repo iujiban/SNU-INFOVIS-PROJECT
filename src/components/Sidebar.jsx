@@ -211,24 +211,6 @@ const Sidebar = ({ onFilterChange, selectedRegion, selectedCountry }) => {
                 name="Year"
                 onChange={handleYearChange}
             />
-            <RadioStack
-                label="Gender"
-                options={genderOptions}
-                name='genderRadio'
-                onChange={handleGenderChange}
-            />
-            <RadioStack
-                label="Age"
-                options={ageOptions}
-                name='ageRadio'
-                onChange={handleAgeChange}
-            />
-            <MultiLevelDropdown
-                label="Drug"
-                options={DrugOptions}
-                levels={['type']}
-                onChange={handleDrugChange}
-            />
         </div>
     )
 }
