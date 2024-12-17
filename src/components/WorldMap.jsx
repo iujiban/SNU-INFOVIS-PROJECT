@@ -171,7 +171,7 @@ const WorldMap = ({ data, selectedRegion, selectedCountry, onCountrySelect }) =>
 
             const alphaScale = d3.scaleLinear()
                 .domain([minAvg, maxAvg])
-                .range([0.5, 1.0]);
+                .range([0.15, 1.0]);
 
             const alphaMap = {};
             averages.forEach(item => {
