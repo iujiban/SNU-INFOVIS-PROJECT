@@ -105,7 +105,7 @@ const UseQuantity = ({ data }) => {
             .attr("y", (d) => y(d.total) - 10)
             .attr("text-anchor", "middle")
             .attr("font-size", "10px")
-            .text((d) => Math.round(d.total));
+            .text((d) => Math.round(d.total / 1000));
     };
 
     useEffect(() => {
